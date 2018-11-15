@@ -76,28 +76,39 @@ def CubeDiff(card_data, list_a, list_b):
     for j in range(m):
       costs[i, j] = CardDistance(card_data[removes[i]], card_data[adds[j]])
   rows, cols = scipy.optimize.linear_sum_assignment(costs)
-  solution = zip(rows, cols)
+  diff = zip(rows, cols)
   width_removes = max(len(r) for r in removes)
   width_adds = max(len(a) for a in adds)
-  for remove, add in solution:
-    f = CardDistanceFeatures(card_data[removes[remove]], card_data[adds[add]])
-    yield f'{removes[remove]:{width_removes}} -> {adds[add]:{width_adds}} '
-    # f'[{f[0]:0.2f} {f[1]:0.2f} {f[2]:0.2f} {f[3]:0.2f}]'
+  for remove, add in diff:
+    yield (removes[remove], adds[add])
   if n > m:
     for extra_remove in set(range(n)) - set(rows):
-      yield f'-{removes[extra_remove]}'
+      yield (removes[extra_remove], None)
   if n < m:
     for extra_add in set(range(m)) - set(cols):
-      yield f'+{adds[extra_add]}'
+      yield (None, adds[extra_add])
+
+
+def FormatDiff(diff):
+  width_removes = max((len(r) for r, a in diff if r), default=0)
+  width_adds = max((len(a) for r, a in diff if a), default=0)
+  for remove, add in diff:
+    if remove and add:
+      yield f'{remove:{width_removes}} -> {add:{width_adds}}'
+    elif remove:
+      yield f'- {remove}'
+    else:
+      yield f'+ {add}'
 
 
 def main(argv):
   card_data = GetCards()
   list_a = [line.strip() for line in open(argv[1]).readlines()]
   list_b = [line.strip() for line in open(argv[2]).readlines()]
-  lines = CubeDiff(card_data, list_a, list_b)
-  for line in sorted(
-      lines, key=lambda line: (line.startswith(('-', '+')), line)):
+  diff = sorted(
+      CubeDiff(card_data, list_a, list_b),
+      key=lambda entry: (-all(entry), entry[0]))
+  for line in FormatDiff(diff):
     print(line)
 
 
