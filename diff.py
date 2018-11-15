@@ -109,6 +109,8 @@ if __name__ == '__main__':
   try:
     main(sys.argv)
   except Exception as e:
-    print(e.__traceback__)
+    import traceback
+    traceback.print_tb(e.__traceback__)
+    print(e)
     import pdb
     pdb.post_mortem()
