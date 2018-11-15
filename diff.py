@@ -91,10 +91,10 @@ def CubeDiff(card_data, list_a, list_b):
       yield f'+{adds[extra_add]}'
 
 
-def main():
+def main(argv):
   card_data = GetCards()
-  list_a = [line.strip() for line in open(sys.argv[1]).readlines()]
-  list_b = [line.strip() for line in open(sys.argv[2]).readlines()]
+  list_a = [line.strip() for line in open(argv[1]).readlines()]
+  list_b = [line.strip() for line in open(argv[2]).readlines()]
   lines = CubeDiff(card_data, list_a, list_b)
   for line in sorted(
       lines, key=lambda line: (line.startswith(('-', '+')), line)):
@@ -102,21 +102,13 @@ def main():
 
 
 def test():
-  card_data = GetCards()
-  CubeDiff(card_data, [
-      'Awakening Zone',
-      'Grave Titan',
-      'Lightning Bolt',
-  ], [
-      'Search for Tomorrow',
-      'Awakening Zone',
-      'Plaguecrafter',
-  ])
+  main(['diff.py', 'removes.txt', 'adds.txt'])
 
 
 if __name__ == '__main__':
   try:
-    main()
-  except:
+    main(sys.argv)
+  except Exception as e:
+    print(e.__traceback__)
     import pdb
     pdb.post_mortem()
