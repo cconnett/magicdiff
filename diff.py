@@ -58,17 +58,33 @@ def GetCards():
   c = json.load(open('AllCards.json'))
   cards = {}
   for key, card in c.items():
-    name = card['name']
+    if card['layout'] == 'split':
+      name = ' // '.join(card['names'])
+    else:
+      name = card['name']
     card['text'] = name + re.sub(f'\\b{name}\\b', '~', card['text'])
     cards[name] = card
   return cards
 
 
+def ExpandList(lst):
+  for line in lst:
+    line = line.strip()
+    try:
+      first_token, rest = line.split(maxsplit=1)
+    except ValueError:
+      continue
+    if first_token.isnumeric():
+      yield from [rest] * int(first_token)
+    else:
+      yield line
+
+
 def CubeDiff(card_data, list_a, list_b):
-  set_a = collections.Counter(list_a)
-  set_b = collections.Counter(list_b)
-  removes = list(set_a - set_b)
-  adds = list(set_b - set_a)
+  set_a = collections.Counter(ExpandList(list_a))
+  set_b = collections.Counter(ExpandList(list_b))
+  removes = list((set_a - set_b).elements())
+  adds = list((set_b - set_a).elements())
 
   n, m = len(removes), len(adds)
   costs = numpy.zeros((n, m))
