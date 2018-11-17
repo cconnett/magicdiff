@@ -9,6 +9,8 @@ import sys
 import numpy
 import scipy.optimize
 
+WUBRG = ['W', 'U', 'B', 'R', 'G']
+
 
 def ColorDistance(a: List[str], b: List[str]) -> float:
   a, b = set(a), set(b)
@@ -121,9 +123,23 @@ def main(argv):
   card_data = GetCards()
   list_a = [line.strip() for line in open(argv[1]).readlines()]
   list_b = [line.strip() for line in open(argv[2]).readlines()]
-  diff = sorted(
-      CubeDiff(card_data, list_a, list_b),
-      key=lambda entry: (-all(entry), entry[0]))
+
+  def SortKey(change):
+    card_a, card_b = change
+    base = ()
+    if not card_a or not card_b:
+      base = ('___',)
+    if not card_a:
+      card_a = card_b
+    colors = card_data[card_a]['colors']
+    return base + (
+        len(colors),
+        tuple(WUBRG.index(c) for c in colors),
+        card_data[card_a]['convertedManaCost'],
+        card_a,
+    )
+
+  diff = sorted(CubeDiff(card_data, list_a, list_b), key=SortKey)
   for line in FormatDiff(diff):
     print(line)
 
