@@ -1,3 +1,4 @@
+# python3
 from typing import List
 
 import collections
@@ -16,7 +17,7 @@ def ColorDistance(a: List[str], b: List[str]) -> float:
   a, b = set(a), set(b)
   if not a and a == b:
     return 0
-  return (1 - (2 * len(a & b) / (len(a) + len(b))))
+  return 1 - (2 * len(a & b) / (len(a) + len(b)))
 
 
 def TextDistance(a: str, b: str) -> float:
@@ -26,11 +27,12 @@ def TextDistance(a: str, b: str) -> float:
 def TypeBucket(types: List[str]) -> str:
   if 'Land' in types:
     return 'Land'
-  if 'Creature' in types:
+  elif 'Creature' in types:
     return 'Creature'
-  if 'Instant' in types or 'Sorcery' in types:
+  elif 'Instant' in types or 'Sorcery' in types:
     return 'Spell'
-  return 'Permanent'
+  else:
+    return 'Permanent'
 
 
 def TypesDistance(a: List[str], b: List[str]) -> int:
@@ -44,11 +46,18 @@ def CmcMetric(card):
 
 def CardDistanceFeatures(a, b):
   color = ColorDistance(a['colors'], b['colors'])
+  color_identity = ColorDistance(a['colorIdentity'], b['colorIdentity'])
   text = TextDistance(a['text'], b['text'])
   types = TypesDistance(a['types'], b['types'])
   cmc = min(4, abs(CmcMetric(a) - CmcMetric(b))) / 4
 
-  return [4 * color, 2 * text, 0.3 * types, 1.5 * cmc]
+  return [
+      2 * color,
+      2 * color_identity,
+      2 * text,
+      0.3 * types,
+      1.5 * cmc,
+  ]
 
 
 def CardDistance(a, b):
@@ -59,12 +68,13 @@ def CardDistance(a, b):
 def GetCards():
   c = json.load(open('AllCards.json'))
   cards = {}
-  for key, card in c.items():
+  for card in c.values():
     if card['layout'] == 'split':
       name = ' // '.join(card['names'])
     else:
       name = card['name']
-    card['text'] = name + re.sub(f'\\b{name}\\b', '~', card['text'])
+    card['text'] = name + re.sub(r'\b' + re.escape(name) + r'\b', '~',
+                                 card.get('text', ''))
     cards[name] = card
   return cards
 
@@ -72,6 +82,7 @@ def GetCards():
 def ExpandList(lst):
   for line in lst:
     line = line.strip()
+    line = line.split(' // ')[0]
     try:
       first_token, rest = line.split(maxsplit=1)
     except ValueError:
@@ -95,8 +106,6 @@ def CubeDiff(card_data, list_a, list_b):
       costs[i, j] = CardDistance(card_data[removes[i]], card_data[adds[j]])
   rows, cols = scipy.optimize.linear_sum_assignment(costs)
   diff = zip(rows, cols)
-  width_removes = max(len(r) for r in removes)
-  width_adds = max(len(a) for a in adds)
   for remove, add in diff:
     yield (removes[remove], adds[add])
   if n > m:
@@ -126,20 +135,21 @@ def main(argv):
 
   def SortKey(change):
     card_a, card_b = change
-    base = ()
+    base = ('',)
     if not card_a or not card_b:
       base = ('___',)
     if not card_a:
       card_a = card_b
-    colors = card_data[card_a]['colors']
+    colors = card_data[card_a]['colorIdentity']
     return base + (
         len(colors),
         tuple(WUBRG.index(c) for c in colors),
-        card_data[card_a]['convertedManaCost'],
+        int(card_data[card_a]['convertedManaCost']),
         card_a,
     )
 
-  diff = sorted(CubeDiff(card_data, list_a, list_b), key=SortKey)
+  diff = list(CubeDiff(card_data, list_a, list_b))
+  diff = sorted(diff, key=SortKey)
   for line in FormatDiff(diff):
     print(line)
 
@@ -154,6 +164,6 @@ if __name__ == '__main__':
   except Exception as e:
     import traceback
     traceback.print_tb(e.__traceback__)
-    print(e)
+    print(repr(e))
     import pdb
     pdb.post_mortem()
