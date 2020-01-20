@@ -1,11 +1,13 @@
 # python3
-from typing import List
-
+"""Diffing algorithm for Magic: the Gathering lists."""
 import collections
 import difflib
 import json
+import pdb
 import re
 import sys
+import traceback
+from typing import List
 
 import numpy
 import scipy.optimize
@@ -66,6 +68,7 @@ def CardDistance(a, b):
 
 
 def GetCards():
+  """Read all cards from AllCards.json."""
   c = json.load(open('AllCards.json'))
   cards = {}
   for card in c.values():
@@ -80,6 +83,22 @@ def GetCards():
 
 
 def ExpandList(lst):
+  """Expand a list by repeating lines that start with a number.
+
+  Example:
+      4 Ajani's Pridemate
+    becomes
+      Ajani's Pridemate
+      Ajani's Pridemate
+      Ajani's Pridemate
+      Ajani's Pridemate
+
+  Args:
+    lst: The list to expand.
+
+  Yields:
+    The expanded elements.
+  """
   for line in lst:
     line = line.strip()
     line = line.split(' // ')[0]
@@ -94,6 +113,7 @@ def ExpandList(lst):
 
 
 def CubeDiff(card_data, list_a, list_b):
+  """Yield a diff between lists by linear sum assignment."""
   set_a = collections.Counter(ExpandList(list_a))
   set_b = collections.Counter(ExpandList(list_b))
   removes = list((set_a - set_b).elements())
@@ -154,16 +174,10 @@ def main(argv):
     print(line)
 
 
-def test():
-  main(['diff.py', 'removes.txt', 'adds.txt'])
-
-
 if __name__ == '__main__':
   try:
     main(sys.argv)
-  except Exception as e:
-    import traceback
+  except Exception as e:  # pylint: disable=broad-except
     traceback.print_tb(e.__traceback__)
     print(repr(e))
-    import pdb
     pdb.post_mortem()
