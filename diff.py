@@ -125,9 +125,11 @@ def GirthInt(value: str) -> int:
 
 
 def GirthDistance(a, b):
-  a_girth = GirthInt(a.get('power', '')) + GirthInt(a.get('toughness', ''))
-  b_girth = GirthInt(b.get('power', '')) + GirthInt(b.get('toughness', ''))
-  return 1 - math.exp(-abs(a_girth - b_girth) / 6)
+  a_girth = (GirthInt(a.get('power', a['convertedManaCost'])) +
+             GirthInt(a.get('toughness', a['convertedManaCost'])))
+  b_girth = (GirthInt(b.get('power', b['convertedManaCost'])) +
+             GirthInt(b.get('toughness', b['convertedManaCost'])))
+  return 1 - math.exp(-abs(a_girth - b_girth) / 3)
 
 
 def CardDistance(tfidf, a, b):
