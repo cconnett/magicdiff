@@ -170,6 +170,12 @@ def GetCards():
     card['text'] = re.sub(r'\b' + re.escape(name) + r'\b', 'CARDNAME',
                           card.get('text', ''))
     # card['text'] = reminder.sub('', card['text'])
+    if 'names' in card:
+      text = ''
+      for nm in card['names']:
+        text += '\n' + c[nm].get('text', '')
+        card['colors'] = list(set(card['colors']) | set(c[nm]['colors']))
+      card['text'] = text
     if name not in cards:
       cards[name] = card
       card['index'] = next(counter)
