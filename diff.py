@@ -1,29 +1,97 @@
 # python3
 """Diffing algorithm for Magic: the Gathering lists."""
+
 import collections
 import difflib
+import itertools
 import json
+import math
 import pdb
 import re
 import sys
 import traceback
-from typing import List
+from typing import List, Iterable
 
-import numpy
+from sklearn.feature_extraction import text
+import numpy as np
 import scipy.optimize
 
 WUBRG = ['W', 'U', 'B', 'R', 'G']
 
 
-def ColorDistance(a: List[str], b: List[str]) -> float:
+def ColorDistanceOverlap(a: Iterable[str], b: Iterable[str]) -> float:
   a, b = set(a), set(b)
   if not a and a == b:
     return 0
   return 1 - (2 * len(a & b) / (len(a) + len(b)))
 
 
-def TextDistance(a: str, b: str) -> float:
+def ColorDistanceVector(a: Iterable[str], b: Iterable[str]) -> float:
+  a, b = collections.Counter(a), collections.Counter(b)
+  if not a or not b:
+    if a == b:
+      return 0
+    else:
+      return 1
+  dot_product = sum(a[c] * b[c] for c in WUBRG)
+  mag_a, mag_b = math.sqrt(sum(a[c]**2 for c in WUBRG)), math.sqrt(
+      sum(b[c]**2 for c in WUBRG))
+  cosine_dist = dot_product / (mag_a * mag_b)
+  return 1 - cosine_dist
+
+
+ColorDistance = ColorDistanceVector
+
+pip = re.compile(r'\{(.*?)\}')
+hybrid = re.compile('([2WUBRG])/([WUBRGP])')
+
+memo = {}
+
+
+def ManaCostToColorVector(mana_cost: str):
+  if mana_cost in memo:
+    return memo[mana_cost]
+  accumulator = collections.Counter()
+  pips = pip.findall(mana_cost)
+  for p in pips:
+    if p in WUBRG:
+      accumulator[p] += 1
+    elif hybrid.match(p):
+      left, right = hybrid.match(p).groups()
+      if right == 'P':
+        accumulator[left] += 0.33
+      elif left == '2':
+        accumulator[right] += 0.67
+      else:
+        accumulator[left] += 0.5
+        accumulator[right] += 0.5
+    elif p == 'X':
+      accumulator['C'] += 3
+    else:
+      accumulator['C'] += int(p)
+  vector = np.array([
+      accumulator['W'],
+      accumulator['U'],
+      accumulator['B'],
+      accumulator['R'],
+      accumulator['G'],
+    # accumulator['C'],
+  ],
+                    dtype=float)
+  if not vector.any():
+    return vector
+  vector /= np.linalg.norm(vector)
+  vector *= sum(accumulator.values())
+  memo[mana_cost] = vector
+  return vector
+
+
+def TextDistanceGestalt(a: str, b: str) -> float:
   return 1 - difflib.SequenceMatcher(a=a, b=b).ratio()
+
+
+def TextDistanceTfidf(a: str, b: str) -> float:
+  pass
 
 
 def TypeBucket(types: List[str]) -> str:
@@ -46,39 +114,64 @@ def CmcMetric(card):
                                       else 0)
 
 
-def CardDistanceFeatures(a, b):
+def GirthInt(value: str) -> int:
+  try:
+    return int(value)
+  except ValueError:
+    if '*' in value:
+      return 4
+    return 0
+
+
+def GirthDistance(a, b):
+  a_girth = GirthInt(a.get('power', '')) + GirthInt(a.get('toughness', ''))
+  b_girth = GirthInt(b.get('power', '')) + GirthInt(b.get('toughness', ''))
+  return 1 - math.exp(-abs(a_girth - b_girth) / 6)
+
+
+def CardDistance(tfidf, a, b):
   color = ColorDistance(a['colors'], b['colors'])
   color_identity = ColorDistance(a['colorIdentity'], b['colorIdentity'])
-  text = TextDistance(a['text'], b['text'])
+  mana_cost = 1 - math.exp(-np.linalg.norm(
+      ManaCostToColorVector(a.get('manaCost', '')) -
+      ManaCostToColorVector(b.get('manaCost', ''))) / 3)
+  # text = TextDistanceGestalt(a['text'], b['text'])
+  text_product = tfidf[a['index']].dot(tfidf[b['index']].T)
+  if text_product:
+    text = 1 - text_product.data[0]
+  else:
+    text = 1
   types = TypesDistance(a['types'], b['types'])
-  cmc = min(4, abs(CmcMetric(a) - CmcMetric(b))) / 4
+  girth = GirthDistance(a, b)
 
-  return [
-      2 * color,
-      2 * color_identity,
-      2 * text,
-      0.3 * types,
-      1.5 * cmc,
-  ]
+  weights = np.array([1, 2, 3, 1.4, 0.0, 0.5])
+  metrics = np.array([color, color_identity, mana_cost, text, types, girth])
+
+  return weights.dot(metrics.T**2)
 
 
-def CardDistance(a, b):
-  features = CardDistanceFeatures(a, b)
-  return sum(features) / len(features)
+reminder = re.compile(r'\(.*\)')
 
 
 def GetCards():
   """Read all cards from AllCards.json."""
   c = json.load(open('AllCards.json'))
   cards = {}
+  counter = itertools.count()
   for card in c.values():
-    if card['layout'] == 'split':
+    if (card['layout'] in ('split', 'aftermath') and
+        'Adventure' not in card['subtypes']):
       name = ' // '.join(card['names'])
     else:
       name = card['name']
-    card['text'] = name + re.sub(r'\b' + re.escape(name) + r'\b', '~',
-                                 card.get('text', ''))
-    cards[name] = card
+    card['text'] = re.sub(r'\b' + re.escape(name) + r'\b', 'CARDNAME',
+                          card.get('text', ''))
+    # card['text'] = reminder.sub('', card['text'])
+    if name not in cards:
+      cards[name] = card
+      card['index'] = next(counter)
+  assert len(cards) == next(counter)
+  assert len(cards) == len(set(cards))
   return cards
 
 
@@ -101,10 +194,11 @@ def ExpandList(lst):
   """
   for line in lst:
     line = line.strip()
-    line = line.split(' // ')[0]
+    # line = line.split(' // ')[0]
     try:
       first_token, rest = line.split(maxsplit=1)
     except ValueError:
+      yield line
       continue
     if first_token.isnumeric():
       yield from [rest] * int(first_token)
@@ -112,7 +206,7 @@ def ExpandList(lst):
       yield line
 
 
-def CubeDiff(card_data, list_a, list_b):
+def CubeDiff(card_data, tfidf, list_a, list_b):
   """Yield a diff between lists by linear sum assignment."""
   set_a = collections.Counter(ExpandList(list_a))
   set_b = collections.Counter(ExpandList(list_b))
@@ -120,10 +214,11 @@ def CubeDiff(card_data, list_a, list_b):
   adds = list((set_b - set_a).elements())
 
   n, m = len(removes), len(adds)
-  costs = numpy.zeros((n, m))
+  costs = np.zeros((n, m))
   for i in range(n):
     for j in range(m):
-      costs[i, j] = CardDistance(card_data[removes[i]], card_data[adds[j]])
+      costs[i, j] = CardDistance(tfidf, card_data[removes[i]],
+                                 card_data[adds[j]])
   rows, cols = scipy.optimize.linear_sum_assignment(costs)
   diff = zip(rows, cols)
   for remove, add in diff:
@@ -150,14 +245,22 @@ def FormatDiff(diff):
 
 def main(argv):
   card_data = GetCards()
+  docs = [
+      '\n'.join([
+          ' '.join(f'istype@{t}' for t in card['types']),
+          ' '.join(f'subtype@{t}' for t in card['subtypes']), card['text']
+      ]) for card in card_data.values()
+  ]
+  tfidf = text.TfidfVectorizer().fit_transform(docs)
+
   list_a = [line.strip() for line in open(argv[1]).readlines()]
   list_b = [line.strip() for line in open(argv[2]).readlines()]
 
   def SortKey(change):
     card_a, card_b = change
     base = ('',)
-    if not card_a or not card_b:
-      base = ('___',)
+    ## if not card_a or not card_b:
+    ##   base = ('___',)
     if not card_a:
       card_a = card_b
     colors = card_data[card_a]['colorIdentity']
@@ -168,7 +271,7 @@ def main(argv):
         card_a,
     )
 
-  diff = list(CubeDiff(card_data, list_a, list_b))
+  diff = list(CubeDiff(card_data, tfidf, list_a, list_b))
   diff = sorted(diff, key=SortKey)
   for line in FormatDiff(diff):
     print(line)
