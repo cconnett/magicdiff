@@ -69,17 +69,18 @@ def ManaCostToColorVector(mana_cost: str):
       accumulator['C'] += 3
     else:
       accumulator['C'] += int(p)
-  vector = np.array([
-      accumulator['W'],
-      accumulator['U'],
-      accumulator['B'],
-      accumulator['R'],
-      accumulator['G'],
-    # accumulator['C'],
-  ],
-                    dtype=float)
+  vector = np.array(
+      [
+          accumulator['W'],
+          accumulator['U'],
+          accumulator['B'],
+          accumulator['R'],
+          accumulator['G'],
+          # Colorless is not a color ;-)
+      ],
+      dtype=float)
   if not vector.any():
-    return vector
+    vector = np.array([1, 1, 1, 1, 1], dtype=float)
   vector /= np.linalg.norm(vector)
   vector *= sum(accumulator.values())
   memo[mana_cost] = vector
