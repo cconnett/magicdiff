@@ -267,15 +267,14 @@ def main(argv):
 
   def SortKey(change):
     card_a, card_b = change
-    base = ('',)
-    ## if not card_a or not card_b:
-    ##   base = ('___',)
     if not card_a:
       card_a = card_b
-    colors = card_data[card_a]['colorIdentity']
-    return base + (
+    colors = card_data[card_a]['colors']
+    ci = card_data[card_a]['colorIdentity']
+    return (
         len(colors),
-        tuple(WUBRG.index(c) for c in colors),
+        sorted(tuple(WUBRG.index(c) for c in colors)),
+        sorted(tuple(WUBRG.index(c) for c in ci)),
         int(card_data[card_a]['convertedManaCost']),
         card_a,
     )
