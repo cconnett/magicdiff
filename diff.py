@@ -249,7 +249,7 @@ def FormatDiff(diff):
     elif remove:
       yield f'- {remove}'
     else:
-      yield f'+ {add}'
+      yield f'{"":{width_removes}}  + {add}'
 
 
 def main(argv):
