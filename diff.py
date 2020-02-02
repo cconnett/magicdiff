@@ -147,7 +147,7 @@ def CardDistance(tfidf, a, b):
   types = TypesDistance(a['types'], b['types'])
   girth = GirthDistance(a, b)
 
-  weights = np.array([1, 2, 3, 1.4, 0.0, 0.5])
+  weights = np.array([1, 2, 3, 1.4, 0.6, 0.5])
   metrics = np.array([color, color_identity, mana_cost, text, types, girth])
 
   return weights.dot(metrics.T**2)
