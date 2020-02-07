@@ -156,7 +156,7 @@ def PageDiff(diff):
       for card in json.load(open('scryfall-artwork-cards.json'))
       if 'image_uris' in card
   }
-  yield '<html><body><table><th><td>Removed</td><td>Added</td></th>'
+  yield '<html><body><table><tr><th>Removed</th><th>Added</th></tr>'
   for remove, add in diff:
     yield '<tr><td>'
     if remove:
