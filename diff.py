@@ -6,6 +6,7 @@ import json
 import pdb
 import re
 import sys
+import time
 import traceback
 from typing import List
 
@@ -136,7 +137,7 @@ def CubeDiff(card_data, list_a, list_b):
       yield (None, adds[extra_add])
 
 
-def FormatDiff(diff):
+def FormatDiff(_, diff):
   width_removes = max((len(r) for r, a in diff if r), default=0)
   width_adds = max((len(a) for r, a in diff if a), default=0)
   for remove, add in diff:
@@ -146,6 +147,28 @@ def FormatDiff(diff):
       yield f'- {remove}'
     else:
       yield f'+ {add}'
+
+
+def ImgUri(card):
+  sf_id = card['scryfallOracleId']
+  return ('https://img.scryfall.com/cards/small/front/' +
+          f'{sf_id[0]}/{sf_id[1]}/{sf_id}.jpg?{int(time.time())}')
+
+
+def PageDiff(card_data, diff):
+  """Generate an HTML diff."""
+  yield '<html><body><table><th><td>Removed</td><td>Added</td></th>'
+  for remove, add in diff:
+    yield '<tr><td>'
+    if remove:
+      removed_card = card_data[remove]
+      yield f'<img src="{ImgUri(removed_card)}">'
+    yield '</td><td>'
+    if add:
+      added_card = card_data[add]
+      yield f'<img src="{ImgUri(added_card)}">'
+    yield '</td></tr>'
+  yield '</table></body></html>'
 
 
 def main(argv):
@@ -170,7 +193,7 @@ def main(argv):
 
   diff = list(CubeDiff(card_data, list_a, list_b))
   diff = sorted(diff, key=SortKey)
-  for line in FormatDiff(diff):
+  for line in FormatDiff(card_data, diff):
     print(line)
 
 
