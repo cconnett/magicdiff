@@ -9,6 +9,7 @@ import math
 import pdb
 import re
 import sys
+import time
 import traceback
 from typing import List, Iterable
 
@@ -252,6 +253,25 @@ def FormatDiff(diff):
       yield f'{"":{width_removes}}  + {add}'
 
 
+def PageDiff(diff):
+  """Generate an HTML diff."""
+  imagery = {
+      card['name']: card['image_uris']['small']
+      for card in json.load(open('scryfall-artwork-cards.json'))
+      if 'image_uris' in card
+  }
+  yield '<html><body><table><tr><th>Removed</th><th>Added</th></tr>'
+  for remove, add in diff:
+    yield '<tr><td>'
+    if remove:
+      yield f'<img src="{imagery[remove]}">'
+    yield '</td><td>'
+    if add:
+      yield f'<img src="{imagery[add]}">'
+    yield '</td></tr>'
+  yield '</table></body></html>'
+
+
 def main(argv):
   card_data = GetCards()
   docs = [
@@ -281,7 +301,7 @@ def main(argv):
 
   diff = list(CubeDiff(card_data, tfidf, list_a, list_b))
   diff = sorted(diff, key=SortKey)
-  for line in FormatDiff(diff):
+  for line in FormatDiff(card_data, diff):
     print(line)
 
 
