@@ -9,15 +9,55 @@ import math
 import pdb
 import re
 import sys
-import time
 import traceback
 from typing import List, Iterable
 
-from sklearn.feature_extraction import text
 import numpy as np
 import scipy.optimize
+from sklearn.feature_extraction import text as text_extraction
 
 WUBRG = ['W', 'U', 'B', 'R', 'G']
+
+REMINDER = re.compile(r'\(.*\)')
+
+
+def GetCards():
+  """Read all cards from AllCards.json."""
+  card_list = json.load(open('scryfall-oracle-cards.json'))
+  card_map = {
+      card['name']: card
+      for card in card_list
+      if card['set_type'] not in ('token', 'vanguard', 'memorabilia')
+  }
+  partial_names = {}
+  counter = itertools.count()
+  for card in card_map.values():
+    if 'card_faces' in card:
+      card['oracle_text'] = '\n'.join(
+          face['oracle_text'] for face in card['card_faces'])
+      if 'colors' not in card:
+        card['colors'] = [
+            c for c in WUBRG
+            if any(c in face['colors'] for face in card['card_faces'])
+        ]
+    if 'oracle_text' not in card:
+      card['oracle_text'] = ''
+    if ' // ' in card['name']:
+      cardname_pattern = '|'.join(
+          re.escape(part) for part in card['name'].split(' // '))
+      for part in card['name'].split(' // '):
+        partial_names[part] = card
+    else:
+      cardname_pattern = card['name']
+    card['oracle_text'] = re.sub(r'\b' + cardname_pattern + r'\b', 'CARDNAME',
+                                 card['oracle_text'])
+    card['oracle_text'] = REMINDER.sub('', card['oracle_text'])
+    card['index'] = next(counter)
+  assert len(card_map) == next(counter)
+  return card_map, partial_names
+
+
+ORACLE, PARTIALS = None, None
 
 
 def ColorDistanceOverlap(a: Iterable[str], b: Iterable[str]) -> float:
@@ -112,8 +152,7 @@ def TypesDistance(a: List[str], b: List[str]) -> int:
 
 
 def CmcMetric(card):
-  return card['convertedManaCost'] + (4 if '{X}' in card.get('manaCost', '')
-                                      else 0)
+  return card['cmc'] + (4 if '{X}' in card.get('mana_cost', '') else 0)
 
 
 def GirthInt(value: str) -> int:
@@ -126,16 +165,18 @@ def GirthInt(value: str) -> int:
 
 
 def GirthDistance(a, b):
-  a_girth = (GirthInt(a.get('power', a['convertedManaCost'])) +
-             GirthInt(a.get('toughness', a['convertedManaCost'])))
-  b_girth = (GirthInt(b.get('power', b['convertedManaCost'])) +
-             GirthInt(b.get('toughness', b['convertedManaCost'])))
+  a_girth = (
+      GirthInt(a.get('power', a['cmc'])) +
+      GirthInt(a.get('toughness', a['cmc'])))
+  b_girth = (
+      GirthInt(b.get('power', b['cmc'])) +
+      GirthInt(b.get('toughness', b['cmc'])))
   return 1 - math.exp(-abs(a_girth - b_girth) / 3)
 
 
 def CardDistance(tfidf, a, b):
   color = ColorDistance(a['colors'], b['colors'])
-  color_identity = ColorDistance(a['colorIdentity'], b['colorIdentity'])
+  color_identity = ColorDistance(a['color_identity'], b['color_identity'])
   mana_cost = 1 - math.exp(-np.linalg.norm(
       ManaCostToColorVector(a.get('manaCost', '')) -
       ManaCostToColorVector(b.get('manaCost', ''))) / 3)
@@ -145,44 +186,13 @@ def CardDistance(tfidf, a, b):
     text = 1 - text_product.data[0]
   else:
     text = 1
-  types = TypesDistance(a['types'], b['types'])
+  types = TypesDistance(a['type_line'], b['type_line'])
   girth = GirthDistance(a, b)
 
   weights = np.array([1, 2, 3, 1.4, 0.6, 0.5])
   metrics = np.array([color, color_identity, mana_cost, text, types, girth])
 
   return weights.dot(metrics.T**2)
-
-
-reminder = re.compile(r'\(.*\)')
-
-
-def GetCards():
-  """Read all cards from AllCards.json."""
-  c = json.load(open('AllCards.json'))
-  cards = {}
-  counter = itertools.count()
-  for card in c.values():
-    if (card['layout'] in ('split', 'aftermath') and
-        'Adventure' not in card['subtypes']):
-      name = ' // '.join(card['names'])
-    else:
-      name = card['name']
-    card['text'] = re.sub(r'\b' + re.escape(name) + r'\b', 'CARDNAME',
-                          card.get('text', ''))
-    # card['text'] = reminder.sub('', card['text'])
-    if 'names' in card:
-      text = ''
-      for name_i in card['names']:
-        text += '\n' + c[name_i].get('text', '')
-        card['colors'] = list(set(card['colors']) | set(c[name_i]['colors']))
-      card['text'] = text
-    if name not in cards:
-      cards[name] = card
-      card['index'] = next(counter)
-  assert len(cards) == next(counter)
-  assert len(cards) == len(set(cards))
-  return cards
 
 
 def ExpandList(lst):
@@ -216,7 +226,7 @@ def ExpandList(lst):
       yield line
 
 
-def CubeDiff(card_data, tfidf, list_a, list_b):
+def CubeDiff(tfidf, list_a, list_b):
   """Yield a diff between lists by linear sum assignment."""
   set_a = collections.Counter(ExpandList(list_a))
   set_b = collections.Counter(ExpandList(list_b))
@@ -227,8 +237,9 @@ def CubeDiff(card_data, tfidf, list_a, list_b):
   costs = np.zeros((n, m))
   for i in range(n):
     for j in range(m):
-      costs[i, j] = CardDistance(tfidf, card_data[removes[i]],
-                                 card_data[adds[j]])
+      remove = ORACLE.get(removes[i], PARTIALS.get(removes[i]))
+      add = ORACLE.get(adds[i], PARTIALS.get(adds[i]))
+      costs[i, j] = CardDistance(tfidf, remove, add)
   rows, cols = scipy.optimize.linear_sum_assignment(costs)
   diff = zip(rows, cols)
   for remove, add in diff:
@@ -255,12 +266,12 @@ def FormatDiff(diff):
 
 def PageDiff(diff):
   """Generate an HTML diff."""
-  data = json.load(open('scryfall-oracle-cards.json'))
   imagery = {
       card['name']: card['image_uris']['small']
-      for card in data
+      for card in ORACLE.values()
       if 'image_uris' in card
   }
+  assert imagery
   yield '<html><body><table><tr><th>Removed</th><th>Added</th></tr>'
   for remove, add in diff:
     yield '<tr><td>'
@@ -284,14 +295,18 @@ def PageDiff(diff):
 
 
 def main(argv):
-  card_data = GetCards()
+  global ORACLE, PARTIALS
+  ORACLE, PARTIALS = GetCards()
   docs = [
-      '\n'.join([
-          ' '.join(f'istype@{t}' for t in card['types']),
-          ' '.join(f'subtype@{t}' for t in card['subtypes']), card['text']
-      ]) for card in card_data.values()
+      '\n'.join((
+          card['type_line'],
+          card['oracle_text'],
+      )) for card in ORACLE.values()
   ]
-  tfidf = text.TfidfVectorizer().fit_transform(docs)
+  # tfidf = text_extraction.TfidfVectorizer().fit_transform(docs)
+  tfidf = text_extraction.TfidfVectorizer(
+      token_pattern=r'[^\s,.:;—•]+', ngram_range=(2, 3),
+      max_features=2000).fit_transform(docs)
 
   list_a = [line.strip() for line in open(argv[1]).readlines()]
   list_b = [line.strip() for line in open(argv[2]).readlines()]
@@ -300,17 +315,18 @@ def main(argv):
     card_a, card_b = change
     if not card_a:
       card_a = card_b
-    colors = card_data[card_a]['colors']
-    ci = card_data[card_a]['colorIdentity']
+    card_a = ORACLE.get(card_a, PARTIALS.get(card_a))
+    colors = card_a['colors']
+    ci = card_a['color_identity']
     return (
         len(colors),
         sorted(tuple(WUBRG.index(c) for c in colors)),
         sorted(tuple(WUBRG.index(c) for c in ci)),
-        int(card_data[card_a]['convertedManaCost']),
-        card_a,
+        int(card_a['cmc']),
+        card_a['name'],
     )
 
-  diff = list(CubeDiff(card_data, tfidf, list_a, list_b))
+  diff = list(CubeDiff(tfidf, list_a, list_b))
   diff = sorted(diff, key=SortKey)
   for line in PageDiff(diff):
     print(line)
