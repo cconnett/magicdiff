@@ -178,8 +178,8 @@ def CardDistance(tfidf_sq, a, b):
   color = ColorDistance(a['colors'], b['colors'])
   color_identity = ColorDistance(a['color_identity'], b['color_identity'])
   mana_cost = 1 - math.exp(-np.linalg.norm(
-      ManaCostToColorVector(a.get('manaCost', '')) -
-      ManaCostToColorVector(b.get('manaCost', ''))) / 3)
+      ManaCostToColorVector(a.get('mana_cost', '')) -
+      ManaCostToColorVector(b.get('mana_cost', ''))) / 3)
   # text = TextDistanceGestalt(a['text'], b['text'])
   text_product = tfidf_sq[a['index'], b['index']]
   text = 1 - text_product
@@ -235,7 +235,7 @@ def CubeDiff(tfidf_sq, list_a, list_b):
   for i in range(n):
     for j in range(m):
       remove = ORACLE.get(removes[i], PARTIALS.get(removes[i]))
-      add = ORACLE.get(adds[i], PARTIALS.get(adds[i]))
+      add = ORACLE.get(adds[j], PARTIALS.get(adds[j]))
       costs[i, j] = CardDistance(tfidf_sq, remove, add)
   rows, cols = scipy.optimize.linear_sum_assignment(costs)
   diff = zip(rows, cols)
