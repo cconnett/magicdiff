@@ -261,6 +261,18 @@ def FormatDiff(diff):
       yield f'{"":{width_removes}}  + {add}'
 
 
+def CardImg(imagery, name, verb='Added'):
+  if not name:
+    return verb
+  elif name in imagery:
+    return f'<img src="{imagery[name]}">'
+  elif name in PARTIALS:
+    key = PARTIALS[name]['name']
+    return f'<img src="{imagery[key]}">'
+  else:
+    return name
+
+
 def PageDiff(diff):
   """Generate an HTML diff."""
   imagery = {
@@ -268,25 +280,19 @@ def PageDiff(diff):
       for card in ORACLE.values()
       if 'image_uris' in card
   }
+  imagery.update({
+      card['name']: card['card_faces'][0]['image_uris']['small']
+      for card in ORACLE.values()
+      if 'card_faces' in card and 'image_uris' not in card
+  })
+
   assert imagery
   yield '<html><body><table><tr><th>Removed</th><th>Added</th></tr>'
   for remove, add in diff:
     yield '<tr><td>'
-    if remove:
-      if remove not in imagery:
-        yield remove
-      else:
-        yield f'<img src="{imagery[remove]}">'
-    else:
-      yield 'Added'
+    yield CardImg(imagery, remove)
     yield '</td><td>'
-    if add:
-      if add not in imagery:
-        yield add
-      else:
-        yield f'<img src="{imagery[add]}">'
-    else:
-      yield 'Removed'
+    yield CardImg(imagery, add, verb='Removed')
     yield '</td></tr>'
   yield '</table></body></html>'
 
