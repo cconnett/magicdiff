@@ -173,9 +173,9 @@ def GetCards():
     # card['text'] = reminder.sub('', card['text'])
     if 'names' in card:
       text = ''
-      for nm in card['names']:
-        text += '\n' + c[nm].get('text', '')
-        card['colors'] = list(set(card['colors']) | set(c[nm]['colors']))
+      for name_i in card['names']:
+        text += '\n' + c[name_i].get('text', '')
+        card['colors'] = list(set(card['colors']) | set(c[name_i]['colors']))
       card['text'] = text
     if name not in cards:
       cards[name] = card
