@@ -255,19 +255,30 @@ def FormatDiff(diff):
 
 def PageDiff(diff):
   """Generate an HTML diff."""
+  data = json.load(open('scryfall-oracle-cards.json'))
   imagery = {
       card['name']: card['image_uris']['small']
-      for card in json.load(open('scryfall-artwork-cards.json'))
+      for card in data
       if 'image_uris' in card
   }
   yield '<html><body><table><tr><th>Removed</th><th>Added</th></tr>'
   for remove, add in diff:
     yield '<tr><td>'
     if remove:
-      yield f'<img src="{imagery[remove]}">'
+      if remove not in imagery:
+        yield remove
+      else:
+        yield f'<img src="{imagery[remove]}">'
+    else:
+      yield 'Added'
     yield '</td><td>'
     if add:
-      yield f'<img src="{imagery[add]}">'
+      if add not in imagery:
+        yield add
+      else:
+        yield f'<img src="{imagery[add]}">'
+    else:
+      yield 'Removed'
     yield '</td></tr>'
   yield '</table></body></html>'
 
@@ -301,7 +312,7 @@ def main(argv):
 
   diff = list(CubeDiff(card_data, tfidf, list_a, list_b))
   diff = sorted(diff, key=SortKey)
-  for line in FormatDiff(card_data, diff):
+  for line in PageDiff(diff):
     print(line)
 
 
