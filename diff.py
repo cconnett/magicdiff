@@ -174,18 +174,15 @@ def GirthDistance(a, b):
   return 1 - math.exp(-abs(a_girth - b_girth) / 3)
 
 
-def CardDistance(tfidf, a, b):
+def CardDistance(tfidf_sq, a, b):
   color = ColorDistance(a['colors'], b['colors'])
   color_identity = ColorDistance(a['color_identity'], b['color_identity'])
   mana_cost = 1 - math.exp(-np.linalg.norm(
       ManaCostToColorVector(a.get('manaCost', '')) -
       ManaCostToColorVector(b.get('manaCost', ''))) / 3)
   # text = TextDistanceGestalt(a['text'], b['text'])
-  text_product = tfidf[a['index']].dot(tfidf[b['index']].T)
-  if text_product:
-    text = 1 - text_product.data[0]
-  else:
-    text = 1
+  text_product = tfidf_sq[a['index'], b['index']]
+  text = 1 - text_product
   types = TypesDistance(a['type_line'], b['type_line'])
   girth = GirthDistance(a, b)
 
@@ -226,7 +223,7 @@ def ExpandList(lst):
       yield line
 
 
-def CubeDiff(tfidf, list_a, list_b):
+def CubeDiff(tfidf_sq, list_a, list_b):
   """Yield a diff between lists by linear sum assignment."""
   set_a = collections.Counter(ExpandList(list_a))
   set_b = collections.Counter(ExpandList(list_b))
@@ -239,7 +236,7 @@ def CubeDiff(tfidf, list_a, list_b):
     for j in range(m):
       remove = ORACLE.get(removes[i], PARTIALS.get(removes[i]))
       add = ORACLE.get(adds[i], PARTIALS.get(adds[i]))
-      costs[i, j] = CardDistance(tfidf, remove, add)
+      costs[i, j] = CardDistance(tfidf_sq, remove, add)
   rows, cols = scipy.optimize.linear_sum_assignment(costs)
   diff = zip(rows, cols)
   for remove, add in diff:
@@ -306,7 +303,8 @@ def main(argv):
   # tfidf = text_extraction.TfidfVectorizer().fit_transform(docs)
   tfidf = text_extraction.TfidfVectorizer(
       token_pattern=r'[^\s,.:;—•]+', ngram_range=(2, 3),
-      max_features=2000).fit_transform(docs)
+      max_features=3000).fit_transform(docs)
+  tfidf_sq = tfidf * tfidf.T
 
   list_a = [line.strip() for line in open(argv[1]).readlines()]
   list_b = [line.strip() for line in open(argv[2]).readlines()]
@@ -326,7 +324,7 @@ def main(argv):
         card_a['name'],
     )
 
-  diff = list(CubeDiff(tfidf, list_a, list_b))
+  diff = list(CubeDiff(tfidf_sq, list_a, list_b))
   diff = sorted(diff, key=SortKey)
   for line in PageDiff(diff):
     print(line)
