@@ -68,6 +68,7 @@ def ColorDistanceOverlap(a: Iterable[str], b: Iterable[str]) -> float:
 
 
 def ColorDistanceVector(a: Iterable[str], b: Iterable[str]) -> float:
+  """Distance between color/identity by vector cosine distance."""
   a, b = collections.Counter(a), collections.Counter(b)
   if not a or not b:
     if a == b:
@@ -90,6 +91,7 @@ memo = {}
 
 
 def ManaCostToColorVector(mana_cost: str):
+  """Convert a mana cost to a vector in colorspace."""
   if mana_cost in memo:
     return memo[mana_cost]
   accumulator = collections.Counter()
@@ -175,6 +177,7 @@ def GirthDistance(a, b):
 
 
 def CardDistance(tfidf_sq, a, b):
+  """A metric for difference between cards a and b."""
   color = ColorDistance(a['colors'], b['colors'])
   color_identity = ColorDistance(a['color_identity'], b['color_identity'])
   mana_cost = 1 - math.exp(-np.linalg.norm(
