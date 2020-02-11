@@ -306,9 +306,21 @@ def main(argv):
       )) for card in ORACLE.values()
   ]
   # tfidf = text_extraction.TfidfVectorizer().fit_transform(docs)
-  tfidf = text_extraction.TfidfVectorizer(
-      token_pattern=r'[^\s,.:;—•]+', ngram_range=(2, 3),
-      max_features=3000).fit_transform(docs)
+  vectorizer = text_extraction.TfidfVectorizer(
+      token_pattern=r'[^\s,.:;—•"]+',
+      stop_words=[
+          'a',
+          'an',
+          'and',
+          'of',
+          'or',
+          'that',
+          'the',
+          'to',
+      ],
+      ngram_range=(2, 3),
+  )
+  tfidf = vectorizer.fit_transform(docs)
   tfidf_sq = tfidf * tfidf.T
 
   list_a = [line.strip() for line in open(argv[1]).readlines()]
