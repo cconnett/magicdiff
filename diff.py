@@ -134,10 +134,6 @@ def TextDistanceGestalt(a: str, b: str) -> float:
   return 1 - difflib.SequenceMatcher(a=a, b=b).ratio()
 
 
-def TextDistanceTfidf(a: str, b: str) -> float:
-  pass
-
-
 def TypeBucket(types: List[str]) -> str:
   if 'Land' in types:
     return 'Land'
