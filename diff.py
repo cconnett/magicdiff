@@ -272,8 +272,8 @@ def CardImg(imagery, name, verb='Added'):
     return name
 
 
-def PageDiff(diff):
-  """Generate an HTML diff."""
+def GetImagery():
+  """Get the imagery dictionary."""
   imagery = {
       card['name']: card['image_uris']['small']
       for card in ORACLE.values()
@@ -284,8 +284,14 @@ def PageDiff(diff):
       for card in ORACLE.values()
       if 'card_faces' in card and 'image_uris' not in card
   })
-
   assert imagery
+  return imagery
+
+
+def PageDiff(diff):
+  """Generate an HTML diff."""
+  imagery = GetImagery()
+
   yield '<html><body><table><tr><th>Removed</th><th>Added</th></tr>'
   for remove, add in diff:
     yield '<tr><td>'
