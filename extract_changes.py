@@ -28,7 +28,42 @@ def GetChanges():
         card_in = a.select('a')[1].text
         results.append((stamp, 'REMOVE', card_out))
         results.append((stamp, 'ADD', card_in))
-  return sorted(results, reverse=True)
+  return results
+
+
+def ConditionalZip(badges, cards):
+  badges = iter(badges)
+  cards = iter(cards)
+  mapping = {'+': 'ADD', '-': 'REMOVE'}
+  for badge in badges:
+    if badge in ('+', '-'):
+      yield (mapping[badge], next(cards))
+    elif badge in ('→',):
+      yield (mapping['-'], next(cards))
+      yield (mapping['+'], next(cards))
+
+
+def GetChangesCobra():
+  """Extract changes from CubeCobra blog html files."""
+  results = []
+  for name in os.listdir('ccdata'):
+    if name.endswith('.html'):
+      soup = bs4.BeautifulSoup(open(f'ccdata/{name}'), 'html.parser')
+      posts = soup.select('.mt-3')
+      for post in posts:
+        if 'Cube Bulk Import' in post.select('.card-title')[0].text:
+          continue
+        deltatext = soup.select('h6.mb-2')[0].text.split('-')[-1].strip()
+        count, unit, unused_ago = deltatext.split()
+        if not unit.endswith('s'):
+          unit += 's'
+        delta = datetime.timedelta(**{unit: int(count)})
+        stamp = datetime.datetime.now() - delta
+        badges = [span.text for span in post.select('span.badge')]
+        cards = [a.text for a in post.select('a.dynamic-autocard')]
+        results.extend(
+            (stamp,) + change for change in ConditionalZip(badges, cards))
+  return results
 
 
 # pprint.pprint(GetChanges(), stream=open('changes.txt', 'w'))
@@ -39,7 +74,8 @@ def TrackCube():
   all_lists = {}
   counter = collections.Counter(
       line.strip().split(' // ')[0] for line in open('ChrissVintageCube.txt'))
-  changes = GetChanges()
+  changes = GetChanges() + GetChangesCobra()
+  changes.sort(reverse=True)
   for stamp, g in itertools.groupby(changes, key=lambda c: c[0]):
     all_lists[stamp] = counter.copy()
     for change in g:
@@ -59,6 +95,10 @@ def TrackCube():
   return all_lists
 
 
-x = TrackCube()
+try:
+  x = TrackCube()
+except:
+  import pdb
+  pdb.post_mortem()
 import IPython
 IPython.embed()
