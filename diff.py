@@ -40,6 +40,8 @@ def GetCards():
             c for c in WUBRG
             if any(c in face['colors'] for face in card['card_faces'])
         ]
+      if 'mana_cost' not in card:
+        card['mana_cost'] = card['card_faces'][0]['mana_cost']
     if 'oracle_text' not in card:
       card['oracle_text'] = ''
     if ' // ' in card['name']:
@@ -53,6 +55,7 @@ def GetCards():
                                  card['oracle_text'])
     card['oracle_text'] = REMINDER.sub('', card['oracle_text'])
     card['index'] = next(counter)
+  card_map['Life // Death']['mana_cost'] = '{1}{B}'
   assert len(card_map) == next(counter)
   return card_map, partial_names
 
@@ -92,6 +95,7 @@ memo = {}
 
 def ManaCostToColorVector(mana_cost: str):
   """Convert a mana cost to a vector in colorspace."""
+  mana_cost = mana_cost.split(' // ')[0]
   if mana_cost in memo:
     return memo[mana_cost]
   accumulator = collections.Counter()
