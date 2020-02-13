@@ -38,12 +38,13 @@ def TrackCube():
   """Construct the intermediate lists."""
   all_lists = {}
   counter = collections.Counter(
-      line.strip() for line in open('ChrissVintageCube.txt'))
+      line.strip().split(' // ')[0] for line in open('ChrissVintageCube.txt'))
   changes = GetChanges()
   for stamp, g in itertools.groupby(changes, key=lambda c: c[0]):
     all_lists[stamp] = counter.copy()
     for change in g:
       _, mode, card = change
+      card = card.split(' // ')[0]
       # We're going backwards from the most recent list; operations are reversed
       # from their natural descriptions.
       if mode in ('SIDEBOARD', 'REMOVE'):

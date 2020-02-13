@@ -302,6 +302,12 @@ def PageDiff(diff):
   yield '</table></body></html>'
 
 
+def Canonicalize(name):
+  if name in PARTIALS:
+    return PARTIALS[name]['name']
+  return name
+
+
 def main(argv):
   global ORACLE, PARTIALS
   ORACLE, PARTIALS = GetCards()
@@ -329,8 +335,8 @@ def main(argv):
   tfidf = vectorizer.fit_transform(docs)
   tfidf_sq = tfidf * tfidf.T
 
-  list_a = [line.strip() for line in open(argv[1]).readlines()]
-  list_b = [line.strip() for line in open(argv[2]).readlines()]
+  list_a = [Canonicalize(line.strip()) for line in open(argv[1]).readlines()]
+  list_b = [Canonicalize(line.strip()) for line in open(argv[2]).readlines()]
 
   def SortKey(change):
     card_a, card_b = change
