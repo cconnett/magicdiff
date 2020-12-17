@@ -79,8 +79,8 @@ def ColorDistanceVector(a: Iterable[str], b: Iterable[str]) -> float:
     else:
       return 1
   dot_product = sum(a[c] * b[c] for c in WUBRG)
-  mag_a, mag_b = math.sqrt(sum(a[c]**2 for c in WUBRG)), math.sqrt(
-      sum(b[c]**2 for c in WUBRG))
+  mag_a = math.sqrt(sum(a[c]**2 for c in WUBRG))
+  mag_b = math.sqrt(sum(b[c]**2 for c in WUBRG))
   cosine_dist = dot_product / (mag_a * mag_b)
   return 1 - cosine_dist
 
