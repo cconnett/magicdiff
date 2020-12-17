@@ -226,6 +226,25 @@ def ExpandList(lst):
       yield line
 
 
+def GetCosts(tfidf_sq, set_a, set_b):
+  n, m = len(set_a), len(set_b)
+  costs = np.zeros((n, m))
+  for i in range(n):
+    for j in range(m):
+      a = ORACLE.get(set_a[i], PARTIALS.get(set_a[i]))
+      b = ORACLE.get(set_b[j], PARTIALS.get(set_b[j]))
+      costs[i, j] = CardDistance(tfidf_sq, a, b)
+  return costs
+
+def FormatCosts(costs):
+  n, m = costs.shape
+  for i in range(n):
+    print(' ' * 6 * i, end='')
+    for j in range(i + 1, m):
+      c = int(costs[i, j] * 10000)
+      print(f'{c:5d}', end=' ')
+    print()
+
 def CubeDiff(tfidf_sq, list_a, list_b):
   """Yield a diff between lists by linear sum assignment."""
   set_a = collections.Counter(ExpandList(list_a))
@@ -233,13 +252,7 @@ def CubeDiff(tfidf_sq, list_a, list_b):
   removes = list((set_a - set_b).elements())
   adds = list((set_b - set_a).elements())
 
-  n, m = len(removes), len(adds)
-  costs = np.zeros((n, m))
-  for i in range(n):
-    for j in range(m):
-      remove = ORACLE.get(removes[i], PARTIALS.get(removes[i]))
-      add = ORACLE.get(adds[j], PARTIALS.get(adds[j]))
-      costs[i, j] = CardDistance(tfidf_sq, remove, add)
+  costs = GetCosts(tfidf_sq, removes, adds)
   rows, cols = scipy.optimize.linear_sum_assignment(costs)
   diff = zip(rows, cols)
   for remove, add in diff:
