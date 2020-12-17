@@ -352,8 +352,8 @@ def main(argv):
   tfidf = vectorizer.fit_transform(docs)
   tfidf_sq = tfidf * tfidf.T
 
-  list_a = [Canonicalize(line.strip()) for line in open(argv[1]).readlines()]
-  list_b = [Canonicalize(line.strip()) for line in open(argv[2]).readlines()]
+  list_a = [Canonicalize(line.strip()) for line in ExpandList(open(argv[1]).readlines())]
+  list_b = [Canonicalize(line.strip()) for line in ExpandList(open(argv[2]).readlines())]
 
   def SortKey(change):
     card_a, card_b = change
