@@ -272,6 +272,7 @@ def CubeDiff(tfidf_sq, list_a, list_b):
   set_b = collections.Counter(ExpandList(list_b))
   removes = list((set_a - set_b).elements())
   adds = list((set_b - set_a).elements())
+  n, m = len(removes), len(adds)
 
   costs = GetCosts(tfidf_sq, removes, adds)
   rows, cols = scipy.optimize.linear_sum_assignment(costs)
