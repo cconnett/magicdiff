@@ -25,7 +25,6 @@ li {
     display: flex;
     align-items: center;
     margin: 0 3em 2em 0;
-    background-color: #E5E5E5;
 }
 
 ul {
@@ -35,7 +34,7 @@ ul {
     justify-content: space-between;
 }
 
-img.arrow {
+img.change-icon {
     margin: 10;
 }
 '''
@@ -299,9 +298,11 @@ def FormatDiff(diff):
       yield f'{"":{width_removes}}  + {add}'
 
 
-def CardImg(imagery, name, verb='Added'):
-  if not name:
-    return verb
+def CardImg(imagery, name):
+  if name == 'REMOVED':
+    return '<img src="BurnCard.png">'
+  elif name == 'ADDED':
+    return '<img src="UnburnCard.png">'
   elif name in imagery:
     return f'<img src="{imagery[name]}">'
   elif name in PARTIALS:
@@ -336,12 +337,16 @@ def PageDiff(diff):
   yield '<body><ul>'
   for remove, add in diff:
     yield '<li class="change">'
-    # TODO: add a placeholder so all the `li`s are the same size. also, always
-    # draw the removal on the left and the add on the right
-    yield CardImg(imagery, remove) or f'<img class="change" src="Plus.png">'
     if remove and add:
-      yield f'<img class="arrow" src="Change.png">'
-    yield CardImg(imagery, add) or f'<img class="change" src="Minus.png">'
+      icon = '<img class="change-icon" src="Change.png">'
+    elif add:
+      icon = '<img class="change-icon" src="Plus.png">'
+    elif remove:
+      icon = '<img class="change-icon" src="Minus.png">'
+
+    yield CardImg(imagery, remove or 'ADDED')
+    yield icon
+    yield CardImg(imagery, add or 'REMOVED')
     yield '</li>'
   yield '</ul></body></html>'
 
