@@ -42,7 +42,7 @@ img.arrow {
 
 def GetCards():
   """Read all cards from AllCards.json."""
-  card_list = json.load(open('scryfall-oracle-cards.json'))
+  card_list = json.load(open('oracle-cards-20201216220601.json'))
   card_map = {
       card['name']: card
       for card in card_list
