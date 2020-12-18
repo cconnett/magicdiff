@@ -133,6 +133,8 @@ def ManaCostToColorVector(mana_cost: str):
         accumulator[right] += 0.5
     elif p == 'X':
       accumulator['C'] += 3
+    elif p in ('C', 'S'):  # Colorless cost; snow
+      accumulator['C'] += 1  # CMC accumulator
     else:
       accumulator['C'] += int(p)
   vector = np.array(
