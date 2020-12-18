@@ -20,6 +20,25 @@ WUBRG = ['W', 'U', 'B', 'R', 'G']
 
 REMINDER = re.compile(r'\(.*\)')
 
+CSS = '''
+li {
+    display: flex;
+    align-items: center;
+    margin: 0 3em 2em 0;
+    background-color: #E5E5E5;
+}
+
+ul {
+    list-style-type: none;
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: space-between;
+}
+
+img.arrow {
+    margin: 10;
+}
+'''
 
 def GetCards():
   """Read all cards from AllCards.json."""
@@ -309,14 +328,19 @@ def PageDiff(diff):
   """Generate an HTML diff."""
   imagery = GetImagery()
 
-  yield '<html><body><table><tr><th>Removed</th><th>Added</th></tr>'
+  yield '<html>'
+  yield f'<head><style>{CSS}</style><link rel="icon" src="icon.png"</head>'
+  yield '<body><ul>'
   for remove, add in diff:
-    yield '<tr><td>'
-    yield CardImg(imagery, remove)
-    yield '</td><td>'
-    yield CardImg(imagery, add, verb='Removed')
-    yield '</td></tr>'
-  yield '</table></body></html>'
+    yield '<li class="change">'
+    # TODO: add a placeholder so all the `li`s are the same size. also, always
+    # draw the removal on the left and the add on the right
+    yield CardImg(imagery, remove) or f'<img class="change" src="Plus.png">'
+    if remove and add:
+      yield f'<img class="arrow" src="Change.png">'
+    yield CardImg(imagery, add) or f'<img class="change" src="Minus.png">'
+    yield '</li>'
+  yield '</ul></body></html>'
 
 
 def Canonicalize(name):
