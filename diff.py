@@ -297,7 +297,7 @@ def CubeDiff(tfidf_sq, list_a, list_b):
       yield (None, adds[extra_add])
 
 
-def FormatDiff(diff):
+def TextDiff(diff):
   width_removes = max((len(r) for r, a in diff if r), default=0)
   width_adds = max((len(a) for r, a in diff if a), default=0)
   for remove, add in diff:
