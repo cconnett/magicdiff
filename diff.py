@@ -37,6 +37,9 @@ ul {
 img.change-icon {
     margin: 10;
 }
+img.card {
+    width: 146;
+}
 '''
 
 def GetCards():
@@ -300,14 +303,14 @@ def FormatDiff(diff):
 
 def CardImg(imagery, name):
   if name == 'REMOVED':
-    return '<img src="BurnCard.png">'
+    return '<img class="card" src="BurnCard.png">'
   elif name == 'ADDED':
-    return '<img src="UnburnCard.png">'
+    return '<img class="card" src="UnburnCard.png">'
   elif name in imagery:
-    return f'<img src="{imagery[name]}">'
+    return f'<img class="card" src="{imagery[name]}">'
   elif name in PARTIALS:
     key = PARTIALS[name]['name']
-    return f'<img src="{imagery[key]}">'
+    return f'<img class="card" src="{imagery[key]}">'
   else:
     return name
 
