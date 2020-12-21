@@ -7,7 +7,9 @@ import itertools
 import json
 import math
 import pdb
+import pickle
 import re
+import sqlite3
 import sys
 import traceback
 from typing import List, Iterable
@@ -42,9 +44,14 @@ img.card {
 }
 '''
 
-def GetCards():
+def GetCards(filename):
   """Read all cards from AllCards.json."""
-  card_list = json.load(open('oracle-cards-20201216220601.json'))
+  try:
+    return pickle.load(open(f'{filename}.pkl', 'rb'))
+  except (IOError, EOFError):
+    pass
+
+  card_list = json.load(open(filename))
   card_map = {
       card['name']: card
       for card in card_list
@@ -78,6 +85,7 @@ def GetCards():
     card['index'] = next(counter)
   card_map['Life // Death']['mana_cost'] = '{1}{B}'
   assert len(card_map) == next(counter)
+  pickle.dump((card_map, partial_names), open(f'{filename}.pkl', 'wb'))
   return card_map, partial_names
 
 
@@ -362,14 +370,13 @@ def Canonicalize(name):
 
 def main(argv):
   global ORACLE, PARTIALS
-  ORACLE, PARTIALS = GetCards()
+  ORACLE, PARTIALS = GetCards('oracle.json')
   docs = [
       '\n'.join((
           card['type_line'],
           card['oracle_text'],
       )) for card in ORACLE.values()
   ]
-  # tfidf = text_extraction.TfidfVectorizer().fit_transform(docs)
   vectorizer = text_extraction.TfidfVectorizer(
       token_pattern=r'[^\s,.:;—•"]+',
       stop_words=[
