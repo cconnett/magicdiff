@@ -176,6 +176,8 @@ def TypeBucket(types: List[str]) -> str:
     return 'Creature'
   elif 'Instant' in types or 'Sorcery' in types:
     return 'Spell'
+  elif 'Planeswalker' in types:
+    return 'Planeswalker'
   else:
     return 'Permanent'
 
