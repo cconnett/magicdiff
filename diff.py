@@ -420,7 +420,8 @@ def main(argv):
 if __name__ == '__main__':
   try:
     main(sys.argv)
-  except Exception as e:  # pylint: disable=broad-except
+  except Exception as e:
     traceback.print_tb(e.__traceback__)
     print(repr(e))
     pdb.post_mortem()
+    raise
