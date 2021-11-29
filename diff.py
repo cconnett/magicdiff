@@ -422,7 +422,10 @@ def main(argv):
 
 if __name__ == '__main__':
   try:
+    import yappi
+    yappi.start()
     main(sys.argv)
+    yappi.get_func_stats().print_all()
   except Exception as e:
     traceback.print_tb(e.__traceback__)
     print(repr(e))
