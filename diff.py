@@ -43,6 +43,7 @@ img.card {
 }
 '''
 
+
 def GetCards(filename):
   """Read all cards from AllCards.json."""
   try:
@@ -195,12 +196,10 @@ def GirthInt(value: str) -> int:
 
 
 def GirthDistance(a, b):
-  a_girth = (
-      GirthInt(a.get('power', a['cmc'])) +
-      GirthInt(a.get('toughness', a['cmc'])))
-  b_girth = (
-      GirthInt(b.get('power', b['cmc'])) +
-      GirthInt(b.get('toughness', b['cmc'])))
+  a_girth = (GirthInt(a.get('power', a['cmc'])) +
+             GirthInt(a.get('toughness', a['cmc'])))
+  b_girth = (GirthInt(b.get('power', b['cmc'])) +
+             GirthInt(b.get('toughness', b['cmc'])))
   return 1 - math.exp(-abs(a_girth - b_girth) / 3)
 
 
@@ -263,6 +262,7 @@ def GetCosts(tfidf_sq, set_a, set_b):
       costs[i, j] = CardDistance(tfidf_sq, a, b)
   return costs
 
+
 def FormatCosts(costs):
   n, m = costs.shape
   for i in range(n):
@@ -271,6 +271,7 @@ def FormatCosts(costs):
       c = int(costs[i, j] * 10000)
       print(f'{c:5d}', end=' ')
     print()
+
 
 def CubeDiff(tfidf_sq, list_a, list_b):
   """Yield a diff between lists by linear sum assignment."""
@@ -390,8 +391,14 @@ def main(argv):
   tfidf = vectorizer.fit_transform(docs)
   tfidf_sq = tfidf * tfidf.T
 
-  list_a = [Canonicalize(line.strip()) for line in ExpandList(open(argv[1]).readlines())]
-  list_b = [Canonicalize(line.strip()) for line in ExpandList(open(argv[2]).readlines())]
+  list_a = [
+      Canonicalize(line.strip())
+      for line in ExpandList(open(argv[1]).readlines())
+  ]
+  list_b = [
+      Canonicalize(line.strip())
+      for line in ExpandList(open(argv[2]).readlines())
+  ]
 
   def SortKey(change):
     card_a, card_b = change
