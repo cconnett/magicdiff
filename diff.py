@@ -2,7 +2,6 @@
 """Diffing algorithm for Magic: the Gathering lists."""
 
 import collections
-import difflib
 import itertools
 import json
 import math
@@ -165,10 +164,6 @@ def ManaCostToColorVector(mana_cost: str):
   return vector
 
 
-def TextDistanceGestalt(a: str, b: str) -> float:
-  return 1 - difflib.SequenceMatcher(a=a, b=b).ratio()
-
-
 def TypeBucket(types: List[str]) -> str:
   if 'Land' in types:
     return 'Land'
@@ -216,7 +211,6 @@ def CardDistance(tfidf_sq, a, b):
   mana_cost = 1 - math.exp(-np.linalg.norm(
       ManaCostToColorVector(a.get('mana_cost', '')) -
       ManaCostToColorVector(b.get('mana_cost', ''))) / 3)
-  # text = TextDistanceGestalt(a['text'], b['text'])
   text_product = tfidf_sq[a['index'], b['index']]
   text = 1 - text_product
   types = TypesDistance(a['type_line'], b['type_line'])
