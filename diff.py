@@ -10,7 +10,6 @@ import math
 import pdb
 import pickle
 import re
-import sqlite3
 import sys
 import traceback
 
