@@ -408,6 +408,9 @@ def main(argv):
         card_a['name'],
     )
 
+  # costs = GetCosts(tfidf_sq, list_a, list_a)
+  # FormatCosts(costs)
+  # return
   diff = list(CubeDiff(tfidf_sq, list_a, list_b))
   diff = sorted(diff, key=SortKey)
   for line in PageDiff(diff):
