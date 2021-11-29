@@ -1,7 +1,9 @@
 # python3
 """Diffing algorithm for Magic: the Gathering lists."""
 
+from typing import List, Iterable
 import collections
+import functools
 import itertools
 import json
 import math
@@ -11,7 +13,6 @@ import re
 import sqlite3
 import sys
 import traceback
-from typing import List, Iterable
 
 import numpy as np
 import scipy.optimize
@@ -119,14 +120,11 @@ ColorDistance = ColorDistanceVector
 pip = re.compile(r'\{(.*?)\}')
 hybrid = re.compile('([2WUBRG])/([WUBRGP])')
 
-memo = {}
 
-
+@functools.cache
 def ManaCostToColorVector(mana_cost: str):
   """Convert a mana cost to a vector in colorspace."""
   mana_cost = mana_cost.split(' // ')[0]
-  if mana_cost in memo:
-    return memo[mana_cost]
   accumulator = collections.Counter()
   pips = pip.findall(mana_cost)
   for p in pips:
@@ -161,7 +159,6 @@ def ManaCostToColorVector(mana_cost: str):
     vector = np.array([1, 1, 1, 1, 1], dtype=float)
   vector /= np.linalg.norm(vector)
   vector *= sum(accumulator.values())
-  memo[mana_cost] = vector
   return vector
 
 
