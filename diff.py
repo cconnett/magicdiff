@@ -252,10 +252,10 @@ def GetCosts(tfidf_sq, set_a, set_b):
   n, m = len(set_a), len(set_b)
   costs = np.zeros((n, m))
   for i in range(n):
-    for j in range(m):
+    for j in range(i, m):
       a = ORACLE.get(set_a[i], PARTIALS.get(set_a[i]))
       b = ORACLE.get(set_b[j], PARTIALS.get(set_b[j]))
-      costs[i, j] = CardDistance(tfidf_sq, a, b)
+      costs[i, j] = costs[j, i] = CardDistance(tfidf_sq, a, b)
   return costs
 
 
