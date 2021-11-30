@@ -79,8 +79,8 @@ def GetCards(filename):
         partial_names[part] = card
     else:
       cardname_pattern = card['name']
-    card['oracle_text'] = re.sub(r'\b' + cardname_pattern + r'\b', 'CARDNAME',
-                                 card['oracle_text'])
+    card['oracle_text'] = re.sub(fr'\b{re.escape(cardname_pattern)}\b',
+                                 'CARDNAME', card['oracle_text'])
     card['oracle_text'] = REMINDER.sub('', card['oracle_text'])
     card['index'] = next(counter)
   card_map['Life // Death']['mana_cost'] = '{1}{B}'
