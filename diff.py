@@ -117,8 +117,8 @@ def ColorDistanceVector(a: Iterable[str], b: Iterable[str]) -> float:
 
 ColorDistance = ColorDistanceVector
 
-pip = re.compile(r'\{(.*?)\}')
-hybrid = re.compile('([2WUBRG])/([WUBRGP])')
+PIP = re.compile(r'\{(.*?)\}')
+HYBRID = re.compile('([2WUBRG])/([WUBRGP])')
 
 
 @functools.cache
@@ -126,12 +126,12 @@ def ManaCostToColorVector(mana_cost: str):
   """Convert a mana cost to a vector in colorspace."""
   mana_cost = mana_cost.split(' // ')[0]
   accumulator = collections.Counter()
-  pips = pip.findall(mana_cost)
+  pips = PIP.findall(mana_cost)
   for p in pips:
     if p in WUBRG:
       accumulator[p] += 1
-    elif hybrid.match(p):
-      left, right = hybrid.match(p).groups()
+    elif HYBRID.match(p):
+      left, right = HYBRID.match(p).groups()
       if right == 'P':
         accumulator[left] += 0.33
       elif left == '2':
@@ -139,12 +139,14 @@ def ManaCostToColorVector(mana_cost: str):
       else:
         accumulator[left] += 0.5
         accumulator[right] += 0.5
-    elif p == 'X':
-      accumulator['C'] += 3
+    elif p in 'XYZ':
+      accumulator['V'] += 3
     elif p in ('C', 'S'):  # Colorless cost; snow
-      accumulator['C'] += 1  # CMC accumulator
+      accumulator['V'] += 1  # Mana value accumulator
+    elif p.startswith('H'):  # Half mana
+      accumulator[p[1]] += 0.5
     else:
-      accumulator['C'] += int(p)
+      accumulator['V'] += int(p)
   vector = np.array(
       [
           accumulator['W'],
