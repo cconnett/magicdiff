@@ -38,3 +38,19 @@ is interpreted as
   Ajani's Pridemate
   Ajani's Pridemate
 ```
+
+## How it works
+
+The program constructs a cost matrix for assigning each card in List A with each
+card in List B. Then it applies a Linear Sum Assignment solver to minimize the
+total score for the assignment.
+
+### Cost metric
+
+The cost metric is the key to the quality of the matching. The cost metric
+defines the "distance" between any two cards on the two lists. The algorithm
+minimizes the sum of the distance between all the cards that are matched to one
+another.
+
+The metric mostly uses mana value, color identity, and text similarity to define
+the distance.
