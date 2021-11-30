@@ -11,4 +11,5 @@ An algorithm for diffing Magic: The Gathering lists (decks, cubes, etc.)
 ### Download Oracle data
 
 Visit https://scryfall.com/docs/api/bulk-data and download the "Oracle Cards"
-file into to this program's folder.
+file into to this program's folder. The program will automatically read the
+matching file with the latest timestamp.

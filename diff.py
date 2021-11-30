@@ -4,6 +4,7 @@
 from typing import List, Iterable
 import collections
 import functools
+import glob
 import itertools
 import json
 import math
@@ -363,7 +364,8 @@ def Canonicalize(name):
 
 def main(argv):
   global ORACLE, PARTIALS
-  ORACLE, PARTIALS = GetCards('oracle.json')
+  potential_oracles = glob.glob('oracle-cards-*.json')
+  ORACLE, PARTIALS = GetCards(max(potential_oracles))
   docs = [
       '\n'.join((
           card['type_line'],
