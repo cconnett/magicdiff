@@ -252,13 +252,17 @@ def ExpandList(lst):
 
 
 def GetCosts(tfidf_sq, set_a, set_b):
+  costs_reference = np.load('/var/local/costs.npy', mmap_mode='r')
+  oracle_to_index = {name: i for i, name in enumerate(sorted(ORACLE.keys()))}
   n, m = len(set_a), len(set_b)
   costs = np.zeros((n, m))
   for i in range(n):
     for j in range(i, m):
       a = ORACLE.get(set_a[i], PARTIALS.get(set_a[i]))
       b = ORACLE.get(set_b[j], PARTIALS.get(set_b[j]))
-      costs[i, j] = costs[j, i] = CardDistance(tfidf_sq, a, b)
+      # costs[i, j] = costs[j, i] = CardDistance(tfidf_sq, a, b)
+      costs[i, j] = costs[j, i] = (
+          costs_reference[oracle_to_index[set_a[i]]][oracle_to_index[set_b[j]]])
   return costs
 
 
@@ -368,28 +372,29 @@ def main(argv):
   global ORACLE, PARTIALS
   potential_oracles = glob.glob('oracle-cards-*.json')
   ORACLE, PARTIALS = GetCards(max(potential_oracles))
-  docs = [
-      '\n'.join((
-          card['type_line'],
-          card['oracle_text'],
-      )) for card in ORACLE.values()
-  ]
-  vectorizer = text_extraction.TfidfVectorizer(
-      token_pattern=r'[^\s,.:;—•"]+',
-      stop_words=[
-          'a',
-          'an',
-          'and',
-          'of',
-          'or',
-          'that',
-          'the',
-          'to',
-      ],
-      ngram_range=(2, 3),
-  )
-  tfidf = vectorizer.fit_transform(docs)
-  tfidf_sq = tfidf * tfidf.T
+  # docs = [
+  #     '\n'.join((
+  #         card['type_line'],
+  #         card['oracle_text'],
+  #     )) for card in ORACLE.values()
+  # ]
+  # vectorizer = text_extraction.TfidfVectorizer(
+  #     token_pattern=r'[^\s,.:;—•"]+',
+  #     stop_words=[
+  #         'a',
+  #         'an',
+  #         'and',
+  #         'of',
+  #         'or',
+  #         'that',
+  #         'the',
+  #         'to',
+  #     ],
+  #     ngram_range=(2, 3),
+  # )
+  # tfidf = vectorizer.fit_transform(docs)
+  # tfidf_sq = tfidf * tfidf.T
+  tfidf_sq = None
 
   list_a = [
       Canonicalize(line.strip())
@@ -417,7 +422,6 @@ def main(argv):
 
   # costs = GetCosts(tfidf_sq, list_a, list_a)
   # FormatCosts(costs)
-  # return
   diff = list(CubeDiff(tfidf_sq, list_a, list_b))
   diff = sorted(diff, key=SortKey)
   for line in PageDiff(diff):
