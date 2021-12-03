@@ -147,18 +147,17 @@ def ManaCostToColorVector(mana_cost: str):
       accumulator[p[1]] += 0.5
     else:
       accumulator['V'] += int(p)
-  vector = np.array(
-      [
-          accumulator['W'],
-          accumulator['U'],
-          accumulator['B'],
-          accumulator['R'],
-          accumulator['G'],
-          # Colorless is not a color ;-)
-      ],
-      dtype=float)
+  vector = np.array([
+      accumulator['W'],
+      accumulator['U'],
+      accumulator['B'],
+      accumulator['R'],
+      accumulator['G'],
+      accumulator['V'],
+  ],
+                    dtype=float)
   if not vector.any():
-    vector = np.array([1, 1, 1, 1, 1], dtype=float)
+    vector = np.array([0, 0, 0, 0, 0, 1], dtype=float)
   vector /= np.linalg.norm(vector)
   vector *= sum(accumulator.values())
   return vector
