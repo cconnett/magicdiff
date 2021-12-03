@@ -42,6 +42,21 @@ img.change-icon {
 img.card {
     width: 146;
 }
+.graphic img {
+  position: relative;
+  left: 18px;
+  top: 17px;
+}
+div.add {
+  background-image: url(NewCardEffect.png);
+}
+div.remove {
+  background-image: url(RemovedCardEffect.png);
+}
+div.graphic {
+  width: 196px;
+  height: 263px;
+}
 '''
 
 
@@ -305,18 +320,14 @@ def TextDiff(diff):
       yield f'{"":{width_removes}}  + {add}'
 
 
-def CardImg(imagery, name):
-  if name == 'REMOVED':
-    return '<img class="card" src="BurnCard.png">'
-  elif name == 'ADDED':
-    return '<img class="card" src="UnburnCard.png">'
-  elif name in imagery:
-    return f'<img class="card" src="{imagery[name]}">'
+def CardImg(imagery, name, overlay=''):
+  if name in imagery:
+    src = imagery[name]
   elif name in PARTIALS:
-    key = PARTIALS[name]['name']
-    return f'<img class="card" src="{imagery[key]}">'
+    src = imagery[PARTIALS[name]['name']]
   else:
     return name
+  return f'<div class="{overlay}"><img class="card" src="{src}"></div>'
 
 
 def GetImagery():
@@ -345,15 +356,16 @@ def PageDiff(diff):
   for remove, add in diff:
     yield '<li class="change">'
     if remove and add:
-      icon = '<img class="change-icon" src="Change.png">'
+      yield CardImg(imagery, remove)
+      yield '<img class="change-icon" src="Change.png">'
+      yield CardImg(imagery, add)
     elif add:
-      icon = '<img class="change-icon" src="Plus.png">'
+      yield '<img class="change-icon" src="Plus.png">'
+      yield CardImg(imagery, add, overlay="add graphic")
     elif remove:
-      icon = '<img class="change-icon" src="Minus.png">'
+      yield CardImg(imagery, add, overlay="remove graphic")
+      yield '<img class="change-icon" src="Minus.png">'
 
-    yield CardImg(imagery, remove or 'ADDED')
-    yield icon
-    yield CardImg(imagery, add or 'REMOVED')
     yield '</li>'
   yield '</ul></body></html>'
 
