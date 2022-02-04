@@ -235,9 +235,10 @@ def CardDistance(tfidf_sq, a, b):
   types = TypesDistance(a['type_line'], b['type_line'])
   girth = GirthDistance(a, b)
 
-  weights = np.array([1, 1, 1, 0.4, 0.6, 0.0])
-  metrics = np.array([color, color_identity, mana_cost, text, types, girth
-                     ]) + 0.01
+  weights = np.array([1, 1, 1, 1, 1, 0.0])
+  metrics = np.array(
+      [color, color_identity, mana_cost, 10 * text, types, girth]) + 0.01
+  return sum(metrics)
   return scipy.stats.mstats.gmean(metrics**weights)
   return weights.dot(metrics.T**2)
 
