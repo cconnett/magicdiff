@@ -22,6 +22,7 @@ from sklearn.feature_extraction import text as text_extraction
 WUBRG = ['W', 'U', 'B', 'R', 'G']
 
 REMINDER = re.compile(r'\(.*\)')
+WORDS = re.compile(r'\w+')
 
 CSS = '''
 li {
@@ -193,21 +194,12 @@ def ManaCostEditDistance(mana_cost_a: str, mana_cost_b: str):
   return ret
 
 
-def TypeBucket(types: List[str]) -> str:
-  if 'Land' in types:
-    return 'Land'
-  elif 'Creature' in types:
-    return 'Creature'
-  elif 'Instant' in types or 'Sorcery' in types:
-    return 'Spell'
-  elif 'Planeswalker' in types:
-    return 'Planeswalker'
-  else:
-    return 'Permanent'
+def TypeBucket(type_line: str) -> List[str]:
+  return WORDS.findall(type_line)
 
 
-def TypesDistance(a: List[str], b: List[str]) -> int:
-  return 1 - bool(TypeBucket(a) == TypeBucket(b))
+def TypesDistance(a: str, b: str) -> int:
+  return len(set(TypeBucket(a)).symmetric_difference(set(TypeBucket(b))))
 
 
 def GirthInt(value: str) -> int:
