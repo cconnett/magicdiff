@@ -16,6 +16,7 @@ import traceback
 
 import numpy as np
 import scipy.optimize
+import scipy.stats.mstats
 from sklearn.feature_extraction import text as text_extraction
 
 WUBRG = ['W', 'U', 'B', 'R', 'G']
@@ -115,23 +116,39 @@ def ColorDistanceVector(a: Iterable[str], b: Iterable[str]) -> float:
   return 1 - cosine_dist
 
 
-ColorDistance = ColorDistanceVector
+def ColorDistanceEdit(a, b):
+  distance = 0
+  if ('W' in a) != ('W' in b):
+    distance += 1
+  if ('U' in a) != ('U' in b):
+    distance += 1
+  if ('B' in a) != ('B' in b):
+    distance += 1
+  if ('R' in a) != ('R' in b):
+    distance += 1
+  if ('G' in a) != ('G' in b):
+    distance += 1
+  return distance
+
+
+ColorDistance = ColorDistanceEdit
 
 PIP = re.compile(r'\{(.*?)\}')
 HYBRID = re.compile('([2WUBRG])/([WUBRGP])')
 
 
 @functools.cache
-def ManaCostToColorVector(mana_cost: str):
-  """Convert a mana cost to a vector in colorspace."""
-  mana_cost = mana_cost.split(' // ')[0]
+def FlattenManaCost(mana_cost: str):
+  """Reduce a mana cost down to array: generic, W pips, U, B, R, G."""
+
+  mana_cost = ''.join(mana_cost.split(' // '))
   accumulator = collections.Counter()
   pips = PIP.findall(mana_cost)
   for p in pips:
     if p in WUBRG:
       accumulator[p] += 1
-    elif HYBRID.match(p):
-      left, right = HYBRID.match(p).groups()
+    elif h := HYBRID.fullmatch(p):
+      left, right = h.groups()
       if right == 'P':
         accumulator[left] += 0.33
       elif left == '2':
@@ -156,11 +173,24 @@ def ManaCostToColorVector(mana_cost: str):
       accumulator['V'],
   ],
                     dtype=float)
+  return vector
+
+
+def ManaCostToColorVector(mana_cost: str):
+  """Convert a mana cost to a vector in colorspace."""
+  vector = FlattenManaCost(mana_cost)
   if not vector.any():
     vector = np.array([0, 0, 0, 0, 0, 1], dtype=float)
   vector /= np.linalg.norm(vector)
   vector *= sum(accumulator.values())
   return vector
+
+
+def ManaCostEditDistance(mana_cost_a: str, mana_cost_b: str):
+  """Distance between two mana costs by edit distance."""
+  ret = sum(abs(FlattenManaCost(mana_cost_a) - FlattenManaCost(mana_cost_b)))
+  # print(mana_cost_a, mana_cost_b, ret)
+  return ret
 
 
 def TypeBucket(types: List[str]) -> str:
@@ -180,10 +210,6 @@ def TypesDistance(a: List[str], b: List[str]) -> int:
   return 1 - bool(TypeBucket(a) == TypeBucket(b))
 
 
-def CmcMetric(card):
-  return card['cmc'] + (3 if '{X}' in card.get('mana_cost', '') else 0)
-
-
 def GirthInt(value: str) -> int:
   try:
     return int(value)
@@ -194,10 +220,12 @@ def GirthInt(value: str) -> int:
 
 
 def GirthDistance(a, b):
-  a_girth = (GirthInt(a.get('power', a['cmc'])) +
-             GirthInt(a.get('toughness', a['cmc'])))
-  b_girth = (GirthInt(b.get('power', b['cmc'])) +
-             GirthInt(b.get('toughness', b['cmc'])))
+  a_girth = (
+      GirthInt(a.get('power', a['cmc'])) +
+      GirthInt(a.get('toughness', a['cmc'])))
+  b_girth = (
+      GirthInt(b.get('power', b['cmc'])) +
+      GirthInt(b.get('toughness', b['cmc'])))
   return 1 - math.exp(-abs(a_girth - b_girth) / 3)
 
 
@@ -205,17 +233,20 @@ def CardDistance(tfidf_sq, a, b):
   """A metric for difference between cards a and b."""
   color = ColorDistance(a['colors'], b['colors'])
   color_identity = ColorDistance(a['color_identity'], b['color_identity'])
-  mana_cost = 1 - math.exp(-np.linalg.norm(
-      ManaCostToColorVector(a.get('mana_cost', '')) -
-      ManaCostToColorVector(b.get('mana_cost', ''))) / 3)
+  # mana_cost = 1 - math.exp(-np.linalg.norm(
+  #     ManaCostToColorVector(a.get('mana_cost', '')) -
+  #     ManaCostToColorVector(b.get('mana_cost', ''))) / 3)
+  mana_cost = ManaCostEditDistance(
+      a.get('mana_cost', ''), b.get('mana_cost', ''))
   text_product = tfidf_sq[a['index'], b['index']]
   text = 1 - text_product
   types = TypesDistance(a['type_line'], b['type_line'])
   girth = GirthDistance(a, b)
 
-  weights = np.array([1, 2, 3, 1.4, 0.6, 0.5])
-  metrics = np.array([color, color_identity, mana_cost, text, types, girth])
-
+  weights = np.array([1, 1, 1, 0.4, 0.6, 0.0])
+  metrics = np.array([color, color_identity, mana_cost, text, types, girth
+                     ]) + 0.01
+  return scipy.stats.mstats.gmean(metrics**weights)
   return weights.dot(metrics.T**2)
 
 
