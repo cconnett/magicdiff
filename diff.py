@@ -201,7 +201,7 @@ def GirthDistance(a, b):
   return 1 - math.exp(-abs(a_girth - b_girth) / 3)
 
 
-def CardDistance(tfidf_sq, a, b):
+def Metrics(tfidf_sq, a, b):
   """A metric for difference between cards a and b."""
   color = ColorDistance(a['colors'], b['colors'])
   color_identity = ColorDistance(a['color_identity'], b['color_identity'])
@@ -213,9 +213,16 @@ def CardDistance(tfidf_sq, a, b):
   types = TypesDistance(a['type_line'], b['type_line'])
   girth = GirthDistance(a, b)
 
-  weights = np.array([1, 2, 3, 1.4, 0.6, 0.5])
   metrics = np.array([color, color_identity, mana_cost, text, types, girth])
+  return metrics
 
+
+def CardDistance(tfidf_sq, a, b):
+  """A metric for difference between cards a and b."""
+  color, color_identity, mana_cost, text, types, girth = Metrics(tfidf_sq, a, b)
+
+  weights = np.array([1, 2, 3, 1.4, 0.6, 0.5])
+  metrics = Metrics(tfidf_sq, a, b)
   return weights.dot(metrics.T**2)
 
 
@@ -287,7 +294,11 @@ def CubeDiff(tfidf_sq, list_a, list_b):
   rows, cols = scipy.optimize.linear_sum_assignment(costs)
   diff = zip(rows, cols)
   for remove, add in diff:
-    yield (removes[remove], adds[add])
+    yield (removes[remove], adds[add],
+           Metrics(tfidf_sq,
+                   ORACLE.get(removes[remove], PARTIALS.get(removes[remove])),
+                   ORACLE.get(adds[add],
+                              PARTIALS.get(adds[add]))), costs[remove, add])
   if n > m:
     for extra_remove in set(range(n)) - set(rows):
       yield (removes[extra_remove], None)
@@ -297,11 +308,12 @@ def CubeDiff(tfidf_sq, list_a, list_b):
 
 
 def TextDiff(diff):
-  width_removes = max((len(r) for r, a in diff if r), default=0)
-  width_adds = max((len(a) for r, a in diff if a), default=0)
-  for remove, add in diff:
+  width_removes = max((len(r) for r, a, s, _ in diff if r), default=0)
+  width_adds = max((len(a) for r, a, s, _ in diff if a), default=0)
+  for remove, add, metrics, score in diff:
     if remove and add:
-      yield f'{remove:{width_removes}} -> {add:{width_adds}}'
+      score_string = ', '.join(f'{m:4.2f}' for m in metrics)
+      yield f'{score:5.1f} ({score_string}) {remove:{width_removes}} -> {add:{width_adds}}'
     elif remove:
       yield f'- {remove}'
     else:
@@ -404,7 +416,7 @@ def main(argv):
   ]
 
   def SortKey(change):
-    card_a, card_b = change
+    card_a, card_b, score, _ = change
     if not card_a:
       card_a = card_b
     card_a = ORACLE.get(card_a, PARTIALS.get(card_a))
@@ -423,7 +435,9 @@ def main(argv):
   # return
   diff = list(CubeDiff(tfidf_sq, list_a, list_b))
   diff = sorted(diff, key=SortKey)
-  for line in PageDiff(diff):
+  # for line in PageDiff(diff):
+  #   print(line)
+  for line in TextDiff(diff):
     print(line)
 
 
