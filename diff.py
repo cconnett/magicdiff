@@ -20,12 +20,13 @@ from sklearn.feature_extraction import text as text_extraction
 import constants
 import color_distance
 import mana_cost_distance
+import types_distance
 
 REMINDER = re.compile(r'\(.*\)')
 
 
 def GetCards(filename):
-  """Read all cards from AllCards.json."""
+  """Read all cards from {filename}."""
   try:
     return pickle.load(open(f'{filename}.pkl', 'rb'))
   except (IOError, EOFError):
@@ -72,23 +73,6 @@ def GetCards(filename):
 ORACLE, PARTIALS = None, None
 
 
-def TypeBucket(types: List[str]) -> str:
-  if 'Land' in types:
-    return 'Land'
-  elif 'Creature' in types:
-    return 'Creature'
-  elif 'Instant' in types or 'Sorcery' in types:
-    return 'Spell'
-  elif 'Planeswalker' in types:
-    return 'Planeswalker'
-  else:
-    return 'Permanent'
-
-
-def TypesDistance(a: List[str], b: List[str]) -> int:
-  return 1 - bool(TypeBucket(a) == TypeBucket(b))
-
-
 def Metrics(tfidf_sq, a, b):
   """A metric for difference between cards a and b."""
   color = color_distance.EditDistance(a['colors'], b['colors'])
@@ -98,7 +82,7 @@ def Metrics(tfidf_sq, a, b):
       a.get('mana_cost', ''), b.get('mana_cost', ''))
   text_product = tfidf_sq[a['index'], b['index']]
   text = 1 - text_product
-  types = TypesDistance(a['type_line'], b['type_line'])
+  types = types_distance.BucketDistance(a['type_line'], b['type_line'])
 
   metrics = np.array([color, color_identity, mana_cost, text, types])
   return metrics
