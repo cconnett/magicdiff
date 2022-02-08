@@ -157,16 +157,6 @@ def FlattenManaCost(mana_cost: str):
   return vector
 
 
-def ManaCostToColorVector(mana_cost: str):
-  """Convert a mana cost to a vector in colorspace."""
-  vector = FlattenManaCost(mana_cost)
-  if not vector.any():
-    vector = np.array([0, 0, 0, 0, 0, 1], dtype=float)
-  vector /= np.linalg.norm(vector)
-  vector *= vector[5]
-  return vector
-
-
 def ManaCostEditDistance(mana_cost_a: str, mana_cost_b: str):
   """Distance between two mana costs by edit distance."""
   ret = sum(abs(FlattenManaCost(mana_cost_a) - FlattenManaCost(mana_cost_b)))
@@ -214,9 +204,8 @@ def Metrics(tfidf_sq, a, b):
   """A metric for difference between cards a and b."""
   color = ColorDistance(a['colors'], b['colors'])
   color_identity = ColorDistance(a['color_identity'], b['color_identity'])
-  mana_cost = 1 - math.exp(-np.linalg.norm(
-      ManaCostToColorVector(a.get('mana_cost', '')) -
-      ManaCostToColorVector(b.get('mana_cost', ''))) / 3)
+  mana_cost = ManaCostEditDistance(
+      a.get('mana_cost', ''), b.get('mana_cost', ''))
   text_product = tfidf_sq[a['index'], b['index']]
   text = 1 - text_product
   types = TypesDistance(a['type_line'], b['type_line'])
