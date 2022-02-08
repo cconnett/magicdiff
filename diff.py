@@ -180,10 +180,6 @@ def TypesDistance(a: List[str], b: List[str]) -> int:
   return 1 - bool(TypeBucket(a) == TypeBucket(b))
 
 
-def CmcMetric(card):
-  return card['cmc'] + (3 if '{X}' in card.get('mana_cost', '') else 0)
-
-
 def GirthInt(value: str) -> int:
   try:
     return int(value)
