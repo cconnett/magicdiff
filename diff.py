@@ -3,7 +3,6 @@
 
 from typing import List, Iterable
 import collections
-import functools
 import glob
 import itertools
 import json
@@ -18,31 +17,11 @@ import numpy as np
 import scipy.optimize
 from sklearn.feature_extraction import text as text_extraction
 
-WUBRG = ['W', 'U', 'B', 'R', 'G']
+import constants
+import color_distance
+import mana_cost_distance
 
 REMINDER = re.compile(r'\(.*\)')
-
-CSS = '''
-li {
-    display: flex;
-    align-items: center;
-    margin: 0 3em 2em 0;
-}
-
-ul {
-    list-style-type: none;
-    display: flex;
-    flex-flow: row wrap;
-    justify-content: space-between;
-}
-
-img.change-icon {
-    margin: 10;
-}
-img.card {
-    width: 146;
-}
-'''
 
 
 def GetCards(filename):
@@ -66,7 +45,7 @@ def GetCards(filename):
           face['oracle_text'] for face in card['card_faces'])
       if 'colors' not in card:
         card['colors'] = [
-            c for c in WUBRG
+            c for c in constants.WUBRG
             if any(c in face['colors'] for face in card['card_faces'])
         ]
       if 'mana_cost' not in card:
@@ -93,77 +72,6 @@ def GetCards(filename):
 ORACLE, PARTIALS = None, None
 
 
-def ColorDistanceEdit(a, b):
-  distance = 0
-  if ('W' in a) != ('W' in b):
-    distance += 1
-  if ('U' in a) != ('U' in b):
-    distance += 1
-  if ('B' in a) != ('B' in b):
-    distance += 1
-  if ('R' in a) != ('R' in b):
-    distance += 1
-  if ('G' in a) != ('G' in b):
-    distance += 1
-  return distance
-
-
-ColorDistance = ColorDistanceEdit
-
-PIP = re.compile(r'\{(.*?)\}')
-HYBRID = re.compile('([2WUBRG])/([WUBRGP])')
-
-
-@functools.cache
-def FlattenManaCost(mana_cost: str):
-  """Reduce a mana cost down to array: W pips, U, B, R, G, ~mana value."""
-  mana_cost = ''.join(mana_cost.split(' // '))
-  accumulator = collections.Counter()
-  pips = PIP.findall(mana_cost)
-  for p in pips:
-    if p in WUBRG:
-      accumulator[p] += 1
-      accumulator['V'] += 1
-    elif h := HYBRID.fullmatch(p):
-      left, right = h.groups()
-      if right == 'P':
-        accumulator[left] += 1 / 3
-        accumulator[V] += 1 / 3
-      elif left == '2':
-        accumulator[right] += 2 / 3
-        accumulator['V'] += 4 / 3
-      else:
-        accumulator[left] += 0.5
-        accumulator[right] += 0.5
-      accumulator['V'] += 1
-    elif p in 'XYZ':
-      accumulator['V'] += 3
-    elif p in ('C', 'S'):  # Colorless cost; snow
-      accumulator['V'] += 1  # Mana value accumulator
-    elif p.startswith('H'):  # Half mana
-      accumulator[p[1]] += 0.5
-      accumulator['V'] += 0.5
-    else:
-      accumulator['V'] += int(p)
-  vector = np.array([
-      accumulator['W'],
-      accumulator['U'],
-      accumulator['B'],
-      accumulator['R'],
-      accumulator['G'],
-      accumulator['V'],
-  ],
-                    dtype=float)
-  return vector
-
-
-def ManaCostEditDistance(mana_cost_a: str, mana_cost_b: str):
-  """Distance between two mana costs by edit distance."""
-  ret = sum(abs(FlattenManaCost(mana_cost_a) - FlattenManaCost(mana_cost_b)))
-  # print(mana_cost_a, mana_cost_b, ret)
-  return ret
-
-
 def TypeBucket(types: List[str]) -> str:
   if 'Land' in types:
     return 'Land'
@@ -183,9 +91,10 @@ def TypesDistance(a: List[str], b: List[str]) -> int:
 
 def Metrics(tfidf_sq, a, b):
   """A metric for difference between cards a and b."""
-  color = ColorDistance(a['colors'], b['colors'])
-  color_identity = ColorDistance(a['color_identity'], b['color_identity'])
-  mana_cost = ManaCostEditDistance(
+  color = color_distance.EditDistance(a['colors'], b['colors'])
+  color_identity = color_distance.EditDistance(a['color_identity'],
+                                               b['color_identity'])
+  mana_cost = mana_cost_distance.EditDistance(
       a.get('mana_cost', ''), b.get('mana_cost', ''))
   text_product = tfidf_sq[a['index'], b['index']]
   text = 1 - text_product
@@ -328,7 +237,8 @@ def PageDiff(diff):
   imagery = GetImagery()
 
   yield '<html>'
-  yield f'<head><style>{CSS}</style><link rel="icon" src="icon.png"</head>'
+  yield f'<head><style>{constants.CSS}</style>'
+  yield '<link rel="icon" src="icon.png"></head>'
   yield '<body><ul>'
   for remove, add in diff:
     yield '<li class="change">'
@@ -397,8 +307,8 @@ def main(argv):
     ci = card_a['color_identity']
     return (
         len(colors),
-        sorted(tuple(WUBRG.index(c) for c in colors)),
-        sorted(tuple(WUBRG.index(c) for c in ci)),
+        sorted(tuple(constants.WUBRG.index(c) for c in colors)),
+        sorted(tuple(constants.WUBRG.index(c) for c in ci)),
         int(card_a['cmc']),
         card_a['name'],
     )
