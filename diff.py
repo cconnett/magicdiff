@@ -272,11 +272,7 @@ def CubeDiff(tfidf_sq, list_a, list_b):
   rows, cols = scipy.optimize.linear_sum_assignment(costs)
   diff = zip(rows, cols)
   for remove, add in diff:
-    yield (removes[remove], adds[add],
-           Metrics(tfidf_sq,
-                   ORACLE.get(removes[remove], PARTIALS.get(removes[remove])),
-                   ORACLE.get(adds[add],
-                              PARTIALS.get(adds[add]))), costs[remove, add])
+    yield (removes[remove], adds[add])
   if n > m:
     for extra_remove in set(range(n)) - set(rows):
       yield (removes[extra_remove], None)
@@ -286,12 +282,11 @@ def CubeDiff(tfidf_sq, list_a, list_b):
 
 
 def TextDiff(diff):
-  width_removes = max((len(r) for r, a, s, _ in diff if r), default=0)
-  width_adds = max((len(a) for r, a, s, _ in diff if a), default=0)
-  for remove, add, metrics, score in diff:
+  width_removes = max((len(r) for r, a in diff if r), default=0)
+  width_adds = max((len(a) for r, a in diff if a), default=0)
+  for remove, add in diff:
     if remove and add:
-      score_string = ', '.join(f'{m:4.2f}' for m in metrics)
-      yield f'{score:5.1f} ({score_string}) {remove:{width_removes}} -> {add:{width_adds}}'
+      yield f'  {remove:{width_removes}} -> {add:{width_adds}}'
     elif remove:
       yield f'- {remove}'
     else:
@@ -394,7 +389,7 @@ def main(argv):
   ]
 
   def SortKey(change):
-    card_a, card_b, score, _ = change
+    card_a, card_b = change
     if not card_a:
       card_a = card_b
     card_a = ORACLE.get(card_a, PARTIALS.get(card_a))
