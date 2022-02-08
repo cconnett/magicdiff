@@ -1,11 +1,8 @@
-# python3
 """Diffing algorithm for Magic: the Gathering lists."""
 
 from typing import List, Iterable
 import collections
 import glob
-import itertools
-import json
 import math
 import pdb
 import pickle
@@ -15,20 +12,17 @@ import traceback
 
 import numpy as np
 import scipy.optimize
-from sklearn.feature_extraction import text as text_extraction
 
 import color_distance
 import constants
 import mana_cost_distance
-import oracle
+import oracle as oracle_lib
 import types_distance
 
-REMINDER = re.compile(r'\(.*\)')
-
-ORACLE, PARTIALS = None, None
+WEIGHTS = np.array([1, 2, 3, 1.4, 0.6])
 
 
-def Metrics(tfidf_sq, a, b):
+def Metrics(tfidf_sq, a: oracle_lib.Card, b: oracle_lib.Card):
   """A metric for difference between cards a and b."""
   color = color_distance.EditDistance(a['colors'], b['colors'])
   color_identity = color_distance.EditDistance(a['color_identity'],
@@ -43,173 +37,98 @@ def Metrics(tfidf_sq, a, b):
   return metrics
 
 
-def CardDistance(tfidf_sq, a, b):
+def CardDistance(tfidf_sq, a: oracle_lib.Card, b: oracle_lib.Card):
   """A metric for difference between cards a and b."""
-  color, color_identity, mana_cost, text, types = Metrics(tfidf_sq, a, b)
-
-  weights = np.array([1, 2, 3, 1.4, 0.6])
   metrics = Metrics(tfidf_sq, a, b)
   return weights.dot(metrics.T**2)
 
 
-def GetCosts(tfidf_sq, set_a, set_b):
-  n, m = len(set_a), len(set_b)
-  costs = np.zeros((n, m))
-  for i in range(n):
-    for j in range(i, m):
-      a = ORACLE.get(set_a[i], PARTIALS.get(set_a[i]))
-      b = ORACLE.get(set_b[j], PARTIALS.get(set_b[j]))
-      costs[i, j] = CardDistance(tfidf_sq, a, b)
-      try:
-        costs[j, i] = costs[i, j]
-      except IndexError:
-        pass
-  return costs
+class CubeDiff:
 
+  def __init__(self, oracle, list_a, list_b):
+    self.oracle = oracle
+    self.set_a = collections.Counter(
+        oracle.Canonicalize(name) for name in oracle_lib.ExpandList(list_a))
+    self.set_b = collections.Counter(
+        oracle.Canonicalize(name) for name in oracle_lib.ExpandList(list_b))
 
-def FormatCosts(costs):
-  n, m = costs.shape
-  for i in range(n):
-    print(' ' * 6 * i, end='')
-    for j in range(i + 1, m):
-      c = int(costs[i, j] * 10000)
-      print(f'{c:5d}', end=' ')
-    print()
+    self.removes = list((self.set_a - self.set_b).elements())
+    self.adds = list((self.set_b - self.set_a).elements())
+    self.PopulateMetrics()
 
+  def PopulateMetrics(self):
+    n, m = len(self.removes), len(self.adds)
+    self.metrics = np.empty((n, m, 5))
+    self.costs = np.empty((n, m))
+    for i in range(n):
+      remove = self.removes[i]
+      for j in range(i, m):
+        add = self.adds[j]
+        self.metrics[i, j] = Metrics(self.oracle.GetTfidfSq(),
+                                     self.oracle.Get(remove),
+                                     self.oracle.Get(add))
+        self.costs[i, j] = WEIGHTS.dot(self.metrics[i, j].T)
+        try:
+          self.metrics[j, i] = self.metrics[i, j]
+          self.costs[j, i] = self.costs[i, j]
+        except IndexError:
+          pass
 
-def CubeDiff(tfidf_sq, list_a, list_b):
-  """Yield a diff between lists by linear sum assignment."""
-  set_a = collections.Counter(oracle.ExpandList(list_a))
-  set_b = collections.Counter(oracle.ExpandList(list_b))
-  removes = list((set_a - set_b).elements())
-  adds = list((set_b - set_a).elements())
-  n, m = len(removes), len(adds)
+  def RawDiff(self):
+    """Yield a diff between lists by linear sum assignment."""
+    n, m = len(self.removes), len(self.adds)
+    rows, cols = scipy.optimize.linear_sum_assignment(self.costs)
+    diff = zip(rows, cols)
+    for remove, add in diff:
+      yield (self.removes[remove], self.adds[add])
+    if n > m:
+      for extra_remove in set(range(n)) - set(rows):
+        yield (self.removes[extra_remove], None)
+    if n < m:
+      for extra_add in set(range(m)) - set(cols):
+        yield (None, self.adds[extra_add])
 
-  costs = GetCosts(tfidf_sq, removes, adds)
-  rows, cols = scipy.optimize.linear_sum_assignment(costs)
-  diff = zip(rows, cols)
-  for remove, add in diff:
-    yield (removes[remove], adds[add])
-  if n > m:
-    for extra_remove in set(range(n)) - set(rows):
-      yield (removes[extra_remove], None)
-  if n < m:
-    for extra_add in set(range(m)) - set(cols):
-      yield (None, adds[extra_add])
+  def PageDiff(self):
+    """Generate an HTML diff."""
+    diff = sorted(self.RawDiff(), key=self._SortKey)
+    imagery = html_utils.GetImagery()
 
+    yield '<html>'
+    yield f'<head><style>{html_utils.CSS}</style>'
+    yield '<link rel="icon" src="icon.png"></head>'
+    yield '<body><ul>'
+    for remove, add in diff:
+      yield '<li class="change">'
+      if remove and add:
+        icon = '<img class="change-icon" src="Change.png">'
+      elif add:
+        icon = '<img class="change-icon" src="Plus.png">'
+      elif remove:
+        icon = '<img class="change-icon" src="Minus.png">'
 
-def TextDiff(diff):
-  width_removes = max((len(r) for r, a in diff if r), default=0)
-  width_adds = max((len(a) for r, a in diff if a), default=0)
-  for remove, add in diff:
-    if remove and add:
-      yield f'  {remove:{width_removes}} -> {add:{width_adds}}'
-    elif remove:
-      yield f'- {remove}'
-    else:
-      yield f'{"":{width_removes}}  + {add}'
+      yield CardImg(imagery, remove or 'ADDED')
+      yield icon
+      yield CardImg(imagery, add or 'REMOVED')
+      yield '</li>'
+    yield '</ul></body></html>'
 
+  def TextDiff(self):
+    diff = sorted(self.RawDiff(), key=self._SortKey)
+    width_removes = max((len(r) for r, a in diff if r), default=0)
+    width_adds = max((len(a) for r, a in diff if a), default=0)
+    for remove, add in diff:
+      if remove and add:
+        yield f'  {remove:{width_removes}} -> {add:{width_adds}}'
+      elif remove:
+        yield f'- {remove}'
+      else:
+        yield f'{"":{width_removes}}  + {add}'
 
-def CardImg(imagery, name):
-  if name == 'REMOVED':
-    return '<img class="card" src="BurnCard.png">'
-  elif name == 'ADDED':
-    return '<img class="card" src="UnburnCard.png">'
-  elif name in imagery:
-    return f'<img class="card" src="{imagery[name]}">'
-  elif name in PARTIALS:
-    key = PARTIALS[name]['name']
-    return f'<img class="card" src="{imagery[key]}">'
-  else:
-    return name
-
-
-def GetImagery():
-  """Get the imagery dictionary."""
-  imagery = {
-      card['name']: card['image_uris']['small']
-      for card in ORACLE.values()
-      if 'image_uris' in card
-  }
-  imagery.update({
-      card['name']: card['card_faces'][0]['image_uris']['small']
-      for card in ORACLE.values()
-      if 'card_faces' in card and 'image_uris' not in card
-  })
-  assert imagery
-  return imagery
-
-
-def PageDiff(diff):
-  """Generate an HTML diff."""
-  imagery = GetImagery()
-
-  yield '<html>'
-  yield f'<head><style>{constants.CSS}</style>'
-  yield '<link rel="icon" src="icon.png"></head>'
-  yield '<body><ul>'
-  for remove, add in diff:
-    yield '<li class="change">'
-    if remove and add:
-      icon = '<img class="change-icon" src="Change.png">'
-    elif add:
-      icon = '<img class="change-icon" src="Plus.png">'
-    elif remove:
-      icon = '<img class="change-icon" src="Minus.png">'
-
-    yield CardImg(imagery, remove or 'ADDED')
-    yield icon
-    yield CardImg(imagery, add or 'REMOVED')
-    yield '</li>'
-  yield '</ul></body></html>'
-
-
-def Canonicalize(name):
-  if name in PARTIALS:
-    return PARTIALS[name]['name']
-  return name
-
-
-def main(argv):
-  global ORACLE, PARTIALS
-  ORACLE, PARTIALS = oracle.GetMaxOracle()
-  docs = [
-      '\n'.join((
-          card['type_line'],
-          card['oracle_text'],
-      )) for card in ORACLE.values()
-  ]
-  vectorizer = text_extraction.TfidfVectorizer(
-      token_pattern=r'[^\s,.:;—•"]+',
-      stop_words=[
-          'a',
-          'an',
-          'and',
-          'of',
-          'or',
-          'that',
-          'the',
-          'to',
-      ],
-      ngram_range=(2, 3),
-  )
-  tfidf = vectorizer.fit_transform(docs)
-  tfidf_sq = tfidf * tfidf.T
-
-  list_a = [
-      Canonicalize(line.strip())
-      for line in oracle.ExpandList(open(argv[1]).readlines())
-  ]
-  list_b = [
-      Canonicalize(line.strip())
-      for line in oracle.ExpandList(open(argv[2]).readlines())
-  ]
-
-  def SortKey(change):
+  def _SortKey(self, change):
     card_a, card_b = change
     if not card_a:
       card_a = card_b
-    card_a = ORACLE.get(card_a, PARTIALS.get(card_a))
+    card_a = self.oracle.Get(card_a)
     colors = card_a['colors']
     ci = card_a['color_identity']
     return (
@@ -220,14 +139,17 @@ def main(argv):
         card_a['name'],
     )
 
-  # costs = GetCosts(tfidf_sq, list_a, list_a)
-  # FormatCosts(costs)
-  # return
-  diff = list(CubeDiff(tfidf_sq, list_a, list_b))
-  diff = sorted(diff, key=SortKey)
-  # for line in PageDiff(diff):
-  #   print(line)
-  for line in TextDiff(diff):
+
+def main(argv):
+  list_a = [
+      line.strip() for line in oracle_lib.ExpandList(open(argv[1]).readlines())
+  ]
+  list_b = [
+      line.strip() for line in oracle_lib.ExpandList(open(argv[2]).readlines())
+  ]
+  oracle = oracle_lib.GetMaxOracle()
+  cube_diff = CubeDiff(oracle, list_a, list_b)
+  for line in cube_diff.TextDiff():
     print(line)
 
 
