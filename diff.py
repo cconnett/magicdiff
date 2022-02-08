@@ -137,9 +137,9 @@ HYBRID = re.compile('([2WUBRG])/([WUBRGP])')
 
 
 @functools.cache
-def ManaCostToColorVector(mana_cost: str):
-  """Convert a mana cost to a vector in colorspace."""
-  mana_cost = mana_cost.split(' // ')[0]
+def FlattenManaCost(mana_cost: str):
+  """Reduce a mana cost down to array: generic, W pips, U, B, R, G."""
+  mana_cost = ''.join(mana_cost.split(' // '))
   accumulator = collections.Counter()
   pips = PIP.findall(mana_cost)
   for p in pips:
@@ -171,11 +171,24 @@ def ManaCostToColorVector(mana_cost: str):
       accumulator['V'],
   ],
                     dtype=float)
+  return vector
+
+
+def ManaCostToColorVector(mana_cost: str):
+  """Convert a mana cost to a vector in colorspace."""
+  vector = FlattenManaCost(mana_cost)
   if not vector.any():
     vector = np.array([0, 0, 0, 0, 0, 1], dtype=float)
   vector /= np.linalg.norm(vector)
-  vector *= sum(accumulator.values())
+  vector *= vector[5]
   return vector
+
+
+def ManaCostEditDistance(mana_cost_a: str, mana_cost_b: str):
+  """Distance between two mana costs by edit distance."""
+  ret = sum(abs(FlattenManaCost(mana_cost_a) - FlattenManaCost(mana_cost_b)))
+  # print(mana_cost_a, mana_cost_b, ret)
+  return ret
 
 
 def TypeBucket(types: List[str]) -> str:
