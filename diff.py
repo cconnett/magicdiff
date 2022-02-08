@@ -140,7 +140,7 @@ HYBRID = re.compile('([2WUBRG])/([WUBRGP])')
 
 @functools.cache
 def FlattenManaCost(mana_cost: str):
-  """Reduce a mana cost down to array: generic, W pips, U, B, R, G."""
+  """Reduce a mana cost down to array: W pips, U, B, R, G, ~mana value."""
 
   mana_cost = ''.join(mana_cost.split(' // '))
   accumulator = collections.Counter()
@@ -148,21 +148,26 @@ def FlattenManaCost(mana_cost: str):
   for p in pips:
     if p in WUBRG:
       accumulator[p] += 1
+      accumulator['V'] += 1
     elif h := HYBRID.fullmatch(p):
       left, right = h.groups()
       if right == 'P':
-        accumulator[left] += 0.33
+        accumulator[left] += 1 / 3
+        accumulator[V] += 1 / 3
       elif left == '2':
-        accumulator[right] += 0.67
+        accumulator[right] += 2 / 3
+        accumulator['V'] += 4 / 3
       else:
         accumulator[left] += 0.5
         accumulator[right] += 0.5
+      accumulator['V'] += 1
     elif p in 'XYZ':
       accumulator['V'] += 3
     elif p in ('C', 'S'):  # Colorless cost; snow
       accumulator['V'] += 1  # Mana value accumulator
     elif p.startswith('H'):  # Half mana
       accumulator[p[1]] += 0.5
+      accumulator['V'] += 0.5
     else:
       accumulator['V'] += int(p)
   vector = np.array([
