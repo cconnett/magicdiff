@@ -93,28 +93,6 @@ def GetCards(filename):
 ORACLE, PARTIALS = None, None
 
 
-def ColorDistanceOverlap(a: Iterable[str], b: Iterable[str]) -> float:
-  a, b = set(a), set(b)
-  if not a and a == b:
-    return 0
-  return 1 - (2 * len(a & b) / (len(a) + len(b)))
-
-
-def ColorDistanceVector(a: Iterable[str], b: Iterable[str]) -> float:
-  """Distance between color/identity by vector cosine distance."""
-  a, b = collections.Counter(a), collections.Counter(b)
-  if not a or not b:
-    if a == b:
-      return 0
-    else:
-      return 1
-  dot_product = sum(a[c] * b[c] for c in WUBRG)
-  mag_a = math.sqrt(sum(a[c]**2 for c in WUBRG))
-  mag_b = math.sqrt(sum(b[c]**2 for c in WUBRG))
-  cosine_dist = dot_product / (mag_a * mag_b)
-  return 1 - cosine_dist
-
-
 def ColorDistanceEdit(a, b):
   distance = 0
   if ('W' in a) != ('W' in b):
