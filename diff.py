@@ -115,7 +115,22 @@ def ColorDistanceVector(a: Iterable[str], b: Iterable[str]) -> float:
   return 1 - cosine_dist
 
 
-ColorDistance = ColorDistanceVector
+def ColorDistanceEdit(a, b):
+  distance = 0
+  if ('W' in a) != ('W' in b):
+    distance += 1
+  if ('U' in a) != ('U' in b):
+    distance += 1
+  if ('B' in a) != ('B' in b):
+    distance += 1
+  if ('R' in a) != ('R' in b):
+    distance += 1
+  if ('G' in a) != ('G' in b):
+    distance += 1
+  return distance
+
+
+ColorDistance = ColorDistanceEdit
 
 PIP = re.compile(r'\{(.*?)\}')
 HYBRID = re.compile('([2WUBRG])/([WUBRGP])')
