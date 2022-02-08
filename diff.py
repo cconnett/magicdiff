@@ -17,9 +17,10 @@ import numpy as np
 import scipy.optimize
 from sklearn.feature_extraction import text as text_extraction
 
-import constants
 import color_distance
+import constants
 import mana_cost_distance
+import oracle
 import types_distance
 
 REMINDER = re.compile(r'\(.*\)')
@@ -51,37 +52,6 @@ def CardDistance(tfidf_sq, a, b):
   return weights.dot(metrics.T**2)
 
 
-def ExpandList(lst):
-  """Expand a list by repeating lines that start with a number.
-
-  Example:
-      4 Ajani's Pridemate
-    becomes
-      Ajani's Pridemate
-      Ajani's Pridemate
-      Ajani's Pridemate
-      Ajani's Pridemate
-
-  Args:
-    lst: The list to expand.
-
-  Yields:
-    The expanded elements.
-  """
-  for line in lst:
-    line = line.strip()
-    # line = line.split(' // ')[0]
-    try:
-      first_token, rest = line.split(maxsplit=1)
-    except ValueError:
-      yield line
-      continue
-    if first_token.isnumeric():
-      yield from [rest] * int(first_token)
-    else:
-      yield line
-
-
 def GetCosts(tfidf_sq, set_a, set_b):
   n, m = len(set_a), len(set_b)
   costs = np.zeros((n, m))
@@ -109,8 +79,8 @@ def FormatCosts(costs):
 
 def CubeDiff(tfidf_sq, list_a, list_b):
   """Yield a diff between lists by linear sum assignment."""
-  set_a = collections.Counter(ExpandList(list_a))
-  set_b = collections.Counter(ExpandList(list_b))
+  set_a = collections.Counter(oracle.ExpandList(list_a))
+  set_b = collections.Counter(oracle.ExpandList(list_b))
   removes = list((set_a - set_b).elements())
   adds = list((set_b - set_a).elements())
   n, m = len(removes), len(adds)
@@ -228,11 +198,11 @@ def main(argv):
 
   list_a = [
       Canonicalize(line.strip())
-      for line in ExpandList(open(argv[1]).readlines())
+      for line in oracle.ExpandList(open(argv[1]).readlines())
   ]
   list_b = [
       Canonicalize(line.strip())
-      for line in ExpandList(open(argv[2]).readlines())
+      for line in oracle.ExpandList(open(argv[2]).readlines())
   ]
 
   def SortKey(change):

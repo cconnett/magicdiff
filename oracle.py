@@ -1,4 +1,10 @@
+import glob
 import pickle
+
+
+def GetMaxOracle():
+  potential_oracles = glob.glob('oracle-cards-*.json')
+  return GetCards(max(potential_oracles))
 
 
 def GetCards(filename):
@@ -44,3 +50,34 @@ def GetCards(filename):
   assert len(card_map) == next(counter)
   pickle.dump((card_map, partial_names), open(f'{filename}.pkl', 'wb'))
   return card_map, partial_names
+
+
+def ExpandList(lst):
+  """Expand a list by repeating lines that start with a number.
+
+  Example:
+      4 Ajani's Pridemate
+    becomes
+      Ajani's Pridemate
+      Ajani's Pridemate
+      Ajani's Pridemate
+      Ajani's Pridemate
+
+  Args:
+    lst: The list to expand.
+
+  Yields:
+    The expanded elements.
+  """
+  for line in lst:
+    line = line.strip()
+    # line = line.split(' // ')[0]
+    try:
+      first_token, rest = line.split(maxsplit=1)
+    except ValueError:
+      yield line
+      continue
+    if first_token.isnumeric():
+      yield from [rest] * int(first_token)
+    else:
+      yield line
