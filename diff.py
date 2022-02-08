@@ -190,10 +190,12 @@ def GirthInt(value: str) -> int:
 
 
 def GirthDistance(a, b):
-  a_girth = (GirthInt(a.get('power', a['cmc'])) +
-             GirthInt(a.get('toughness', a['cmc'])))
-  b_girth = (GirthInt(b.get('power', b['cmc'])) +
-             GirthInt(b.get('toughness', b['cmc'])))
+  a_girth = (
+      GirthInt(a.get('power', a['cmc'])) +
+      GirthInt(a.get('toughness', a['cmc'])))
+  b_girth = (
+      GirthInt(b.get('power', b['cmc'])) +
+      GirthInt(b.get('toughness', b['cmc'])))
   return 1 - math.exp(-abs(a_girth - b_girth) / 3)
 
 
