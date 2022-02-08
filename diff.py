@@ -181,25 +181,6 @@ def TypesDistance(a: List[str], b: List[str]) -> int:
   return 1 - bool(TypeBucket(a) == TypeBucket(b))
 
 
-def GirthInt(value: str) -> int:
-  try:
-    return int(value)
-  except ValueError:
-    if '*' in value:
-      return 4
-    return 0
-
-
-def GirthDistance(a, b):
-  a_girth = (
-      GirthInt(a.get('power', a['cmc'])) +
-      GirthInt(a.get('toughness', a['cmc'])))
-  b_girth = (
-      GirthInt(b.get('power', b['cmc'])) +
-      GirthInt(b.get('toughness', b['cmc'])))
-  return 1 - math.exp(-abs(a_girth - b_girth) / 3)
-
-
 def Metrics(tfidf_sq, a, b):
   """A metric for difference between cards a and b."""
   color = ColorDistance(a['colors'], b['colors'])
@@ -209,17 +190,16 @@ def Metrics(tfidf_sq, a, b):
   text_product = tfidf_sq[a['index'], b['index']]
   text = 1 - text_product
   types = TypesDistance(a['type_line'], b['type_line'])
-  girth = GirthDistance(a, b)
 
-  metrics = np.array([color, color_identity, mana_cost, text, types, girth])
+  metrics = np.array([color, color_identity, mana_cost, text, types])
   return metrics
 
 
 def CardDistance(tfidf_sq, a, b):
   """A metric for difference between cards a and b."""
-  color, color_identity, mana_cost, text, types, girth = Metrics(tfidf_sq, a, b)
+  color, color_identity, mana_cost, text, types = Metrics(tfidf_sq, a, b)
 
-  weights = np.array([1, 2, 3, 1.4, 0.6, 0.5])
+  weights = np.array([1, 2, 3, 1.4, 0.6])
   metrics = Metrics(tfidf_sq, a, b)
   return weights.dot(metrics.T**2)
 
