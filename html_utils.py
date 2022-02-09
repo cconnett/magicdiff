@@ -28,9 +28,6 @@ def CardImg(imagery, name):
     return '<img class="card" src="UnburnCard.png">'
   elif name in imagery:
     return f'<img class="card" src="{imagery[name]}">'
-  elif name in PARTIALS:
-    key = PARTIALS[name]['name']
-    return f'<img class="card" src="{imagery[key]}">'
   else:
     return name
 
@@ -39,12 +36,12 @@ def GetImagery(oracle):
   """Get the imagery dictionary."""
   imagery = {
       card['name']: card['image_uris']['small']
-      for card in oracle.values()
+      for card in oracle.oracle.values()
       if 'image_uris' in card
   }
   imagery.update({
       card['name']: card['card_faces'][0]['image_uris']['small']
-      for card in oracle.values()
+      for card in oracle.oracle.values()
       if 'card_faces' in card and 'image_uris' not in card
   })
   return imagery

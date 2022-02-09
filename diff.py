@@ -15,6 +15,7 @@ import scipy.optimize
 
 import color_distance
 import constants
+import html_utils
 import mana_cost_distance
 import oracle as oracle_lib
 import types_distance
@@ -85,14 +86,16 @@ class CubeDiff:
 
   def PageDiff(self):
     """Generate an HTML diff."""
-    diff = sorted(self.RawDiff(), key=self._SortKey)
-    imagery = html_utils.GetImagery()
+    index_diff = sorted(self.RawDiff(), key=self._SortKey)
+    cardname_diff = [(self.removes[r] if r else None,
+                      self.adds[a] if a else None) for r, a in index_diff]
+    imagery = html_utils.GetImagery(self.oracle)
 
     yield '<html>'
     yield f'<head><style>{html_utils.CSS}</style>'
     yield '<link rel="icon" src="icon.png"></head>'
     yield '<body><ul>'
-    for remove, add in diff:
+    for remove, add in cardname_diff:
       yield '<li class="change">'
       if remove and add:
         icon = '<img class="change-icon" src="Change.png">'
@@ -101,9 +104,11 @@ class CubeDiff:
       elif remove:
         icon = '<img class="change-icon" src="Minus.png">'
 
-      yield CardImg(imagery, remove or 'ADDED')
+      yield html_utils.CardImg(imagery,
+                               self.oracle.Canonicalize(remove) or 'ADDED')
       yield icon
-      yield CardImg(imagery, add or 'REMOVED')
+      yield html_utils.CardImg(imagery,
+                               self.oracle.Canonicalize(add) or 'REMOVED')
       yield '</li>'
     yield '</ul></body></html>'
 
@@ -151,7 +156,7 @@ def main(argv):
   ]
   oracle = oracle_lib.GetMaxOracle()
   cube_diff = CubeDiff(oracle, list_a, list_b)
-  for line in cube_diff.TextDiff():
+  for line in cube_diff.PageDiff():
     print(line)
 
 
