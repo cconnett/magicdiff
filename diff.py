@@ -1,6 +1,6 @@
 """Diffing algorithm for Magic: the Gathering lists."""
 
-from typing import List, Iterable
+from typing import List, Iterable, Tuple, Optional
 import collections
 import glob
 import math
@@ -62,31 +62,26 @@ class CubeDiff:
     self.costs = np.empty((n, m))
     for i in range(n):
       remove = self.removes[i]
-      for j in range(i, m):
+      for j in range(m):
         add = self.adds[j]
         self.metrics[i, j] = Metrics(self.oracle.GetTfidfSq(),
                                      self.oracle.Get(remove),
                                      self.oracle.Get(add))
         self.costs[i, j] = WEIGHTS.dot(self.metrics[i, j].T)
-        try:
-          self.metrics[j, i] = self.metrics[i, j]
-          self.costs[j, i] = self.costs[i, j]
-        except IndexError:
-          pass
 
-  def RawDiff(self):
+  def RawDiff(self) -> Iterable[Tuple[Optional[int], Optional[int]]]:
     """Yield a diff between lists by linear sum assignment."""
     n, m = len(self.removes), len(self.adds)
     rows, cols = scipy.optimize.linear_sum_assignment(self.costs)
     diff = zip(rows, cols)
     for remove, add in diff:
-      yield (self.removes[remove], self.adds[add])
+      yield (remove, add)
     if n > m:
       for extra_remove in set(range(n)) - set(rows):
-        yield (self.removes[extra_remove], None)
+        yield (extra_remove, None)
     if n < m:
       for extra_add in set(range(m)) - set(cols):
-        yield (None, self.adds[extra_add])
+        yield (None, extra_add)
 
   def PageDiff(self):
     """Generate an HTML diff."""
@@ -113,11 +108,16 @@ class CubeDiff:
     yield '</ul></body></html>'
 
   def TextDiff(self):
-    diff = sorted(self.RawDiff(), key=self._SortKey)
-    width_removes = max((len(r) for r, a in diff if r), default=0)
-    width_adds = max((len(a) for r, a in diff if a), default=0)
-    for remove, add in diff:
+    index_diff = sorted(self.RawDiff(), key=self._SortKey)
+    cardname_diff = [(self.removes[r] if r else None,
+                      self.adds[a] if a else None) for r, a in index_diff]
+    width_removes = max((len(r) for r, a in cardname_diff if r), default=0)
+    width_adds = max((len(a) for r, a in cardname_diff if a), default=0)
+    for r, a in index_diff:
+      remove = self.removes[r] if r else None
+      add = self.adds[a] if a else None
       if remove and add:
+        yield ', '.join(f'{m:3.1f}' for m in self.metrics[r, a])
         yield f'  {remove:{width_removes}} -> {add:{width_adds}}'
       elif remove:
         yield f'- {remove}'
@@ -126,6 +126,8 @@ class CubeDiff:
 
   def _SortKey(self, change):
     card_a, card_b = change
+    card_a = self.removes[card_a] if card_a is not None else None
+    card_b = self.adds[card_b] if card_b is not None else None
     if not card_a:
       card_a = card_b
     card_a = self.oracle.Get(card_a)
