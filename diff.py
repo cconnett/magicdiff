@@ -91,15 +91,15 @@ class CubeDiff:
   def PageDiff(self):
     """Generate an HTML diff."""
     index_diff = sorted(self.RawDiff(), key=self._SortKey)
-    cardname_diff = [(self.removes[r] if r else None,
-                      self.adds[a] if a else None) for r, a in index_diff]
+    card_diff = [(self.removes[r] if r else None, self.adds[a] if a else None)
+                 for r, a in index_diff]
     imagery = html_utils.GetImagery(self.oracle)
 
     yield '<html>'
     yield f'<head><style>{html_utils.CSS}</style>'
     yield '<link rel="icon" src="icon.png"></head>'
     yield '<body><ul>'
-    for remove, add in cardname_diff:
+    for remove, add in card_diff:
       yield '<li class="change">'
       if remove and add:
         icon = '<img class="change-icon" src="Change.png">'
@@ -108,11 +108,9 @@ class CubeDiff:
       elif remove:
         icon = '<img class="change-icon" src="Minus.png">'
 
-      yield html_utils.CardImg(imagery,
-                               self.oracle.Canonicalize(remove) or 'ADDED')
+      yield html_utils.CardImg(imagery, remove or 'ADDED')
       yield icon
-      yield html_utils.CardImg(imagery,
-                               self.oracle.Canonicalize(add) or 'REMOVED')
+      yield html_utils.CardImg(imagery, add or 'REMOVED')
       yield '</li>'
     yield '</ul></body></html>'
 

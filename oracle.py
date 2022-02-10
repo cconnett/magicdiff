@@ -58,6 +58,8 @@ class Card:
     return hash(self.name)
 
   def __eq__(self, o):
+    if not isinstance(o, Card):
+      return False
     return o.name == self.name
 
   @property

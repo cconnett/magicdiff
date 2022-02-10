@@ -21,13 +21,13 @@ img.card {
 '''
 
 
-def CardImg(imagery, name):
-  if name == 'REMOVED':
+def CardImg(imagery, card):
+  if card == 'REMOVED':
     return '<img class="card" src="BurnCard.png">'
-  elif name == 'ADDED':
+  elif card == 'ADDED':
     return '<img class="card" src="UnburnCard.png">'
-  elif name in imagery:
-    return f'<img class="card" src="{imagery[name]}">'
+  elif card.name in imagery:
+    return f'<img class="card" src="{imagery[card.name]}">'
   else:
     return name
 
