@@ -53,8 +53,14 @@ class CubeDiff:
     self.set_b = collections.Counter(
         oracle.Canonicalize(name) for name in oracle_lib.ExpandList(list_b))
 
-    self.removes = list((self.set_a - self.set_b).elements())
-    self.adds = list((self.set_b - self.set_a).elements())
+    self.removes = [
+        self.oracle.Get(cardname)
+        for cardname in (self.set_a - self.set_b).elements()
+    ]
+    self.adds = [
+        self.oracle.Get(cardname)
+        for cardname in (self.set_b - self.set_a).elements()
+    ]
     self.PopulateMetrics()
 
   def PopulateMetrics(self):
@@ -65,9 +71,7 @@ class CubeDiff:
       remove = self.removes[i]
       for j in range(m):
         add = self.adds[j]
-        self.metrics[i, j] = Metrics(self.oracle.GetTfidfSq(),
-                                     self.oracle.Get(remove),
-                                     self.oracle.Get(add))
+        self.metrics[i, j] = Metrics(self.oracle.GetTfidfSq(), remove, add)
         self.costs[i, j] = WEIGHTS.dot(self.metrics[i, j].T)
 
   def RawDiff(self) -> Iterable[Tuple[Optional[int], Optional[int]]]:
@@ -114,15 +118,16 @@ class CubeDiff:
 
   def TextDiff(self):
     index_diff = sorted(self.RawDiff(), key=self._SortKey)
-    cardname_diff = [(self.removes[r] if r else None,
-                      self.adds[a] if a else None) for r, a in index_diff]
-    width_removes = max((len(r) for r, a in cardname_diff if r), default=0)
-    width_adds = max((len(a) for r, a in cardname_diff if a), default=0)
+    card_diff = [(self.removes[r] if r else None, self.adds[a] if a else None)
+                 for r, a in index_diff]
+    width_removes = max((len(r.shortname) for r, a in card_diff if r),
+                        default=0)
+    width_adds = max((len(a.shortname) for r, a in card_diff if a), default=0)
     for r, a in index_diff:
-      remove = self.removes[r] if r else None
-      add = self.adds[a] if a else None
+      remove = self.removes[r].shortname if r else None
+      add = self.adds[a].shortname if a else None
       if remove and add:
-        yield ', '.join(f'{m:3.1f}' for m in self.metrics[r, a])
+        # yield ', '.join(f'{m:3.1f}' for m in self.metrics[r, a])
         yield f'  {remove:{width_removes}} -> {add:{width_adds}}'
       elif remove:
         yield f'- {remove}'
@@ -130,12 +135,11 @@ class CubeDiff:
         yield f'{"":{width_removes}}  + {add}'
 
   def _SortKey(self, change):
-    card_a, card_b = change
-    card_a = self.removes[card_a] if card_a is not None else None
-    card_b = self.adds[card_b] if card_b is not None else None
+    index_a, index_b = change
+    card_a = self.removes[index_a] if index_a is not None else None
+    card_b = self.adds[index_b] if index_b is not None else None
     if not card_a:
       card_a = card_b
-    card_a = self.oracle.Get(card_a)
     colors = card_a['colors']
     ci = card_a['color_identity']
     return (

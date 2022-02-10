@@ -8,8 +8,6 @@ import re
 from sklearn.feature_extraction import text as text_extraction
 
 import constants
-# Type for Card struct from Oracle json: Dictionary of strings to stuff.
-Card = Dict[str, Any]
 
 REMINDER = re.compile(r'\(.*\)')
 
@@ -17,6 +15,60 @@ REMINDER = re.compile(r'\(.*\)')
 def GetMaxOracle():
   potential_oracles = glob.glob('oracle-cards-*.json')
   return Oracle(max(potential_oracles))
+
+
+class Card:
+
+  def __init__(self, json_dict):
+    self.json = json_dict
+    if 'card_faces' in self:
+      self['oracle_text'] = '\n'.join(
+          face['oracle_text'] for face in self['card_faces'])
+      if 'colors' not in self:
+        self['colors'] = [
+            c for c in constants.WUBRG
+            if any(c in face['colors'] for face in self['card_faces'])
+        ]
+      if 'mana_cost' not in self:
+        self['mana_cost'] = self['card_faces'][0]['mana_cost']
+    if 'oracle_text' not in self:
+      self['oracle_text'] = ''
+    if ' // ' in self['name']:
+      cardname_pattern = '|'.join(
+          re.escape(part) for part in self['name'].split(' // '))
+    else:
+      cardname_pattern = re.escape(self['name'])
+    self['oracle_text'] = re.sub(fr'\b{cardname_pattern}\b', 'CARDNAME',
+                                 self['oracle_text'])
+    self['oracle_text'] = REMINDER.sub('', self['oracle_text'])
+
+  def __contains__(self, key):
+    return key in self.json
+
+  def __getitem__(self, key):
+    return self.json[key]
+
+  def get(self, key, default=None):
+    return self.json.get(key, default)
+
+  def __setitem__(self, key, value):
+    self.json[key] = value
+
+  def __hash__(self):
+    return hash(self.name)
+
+  def __eq__(self, o):
+    return o.name == self.name
+
+  @property
+  def name(self):
+    return self.json['name']
+
+  @property
+  def shortname(self):
+    if len(self.name) <= 16:
+      return self.name
+    return self.json['name'].split(' // ')[0]
 
 
 class Oracle:
@@ -29,37 +81,18 @@ class Oracle:
     except (IOError, EOFError):
       pass
 
-    card_list = json.load(open(filename))
+    json_card_dicts = json.load(open(filename))
     self.oracle = {
-        card['name']: card
-        for card in card_list
-        if card['set_type'] not in ('token', 'vanguard', 'memorabilia')
+        card_dict['name']: Card(card_dict)
+        for card_dict in json_card_dicts
+        if card_dict['set_type'] not in ('token', 'vanguard', 'memorabilia')
     }
+
     self.partials = {}
     counter = itertools.count()
     for card in self.oracle.values():
-      if 'card_faces' in card:
-        card['oracle_text'] = '\n'.join(
-            face['oracle_text'] for face in card['card_faces'])
-        if 'colors' not in card:
-          card['colors'] = [
-              c for c in constants.WUBRG
-              if any(c in face['colors'] for face in card['card_faces'])
-          ]
-        if 'mana_cost' not in card:
-          card['mana_cost'] = card['card_faces'][0]['mana_cost']
-      if 'oracle_text' not in card:
-        card['oracle_text'] = ''
-      if ' // ' in card['name']:
-        cardname_pattern = '|'.join(
-            re.escape(part) for part in card['name'].split(' // '))
-        for part in card['name'].split(' // '):
-          self.partials[part] = card
-      else:
-        cardname_pattern = card['name']
-      card['oracle_text'] = re.sub(fr'\b{re.escape(cardname_pattern)}\b',
-                                   'CARDNAME', card['oracle_text'])
-      card['oracle_text'] = REMINDER.sub('', card['oracle_text'])
+      for part in card.name.split(' // '):
+        self.partials[part] = card
       card['index'] = next(counter)
     self.oracle['Life // Death']['mana_cost'] = '{1}{B}'
     assert len(self.oracle) == next(counter)
@@ -73,7 +106,7 @@ class Oracle:
 
   def Canonicalize(self, name):
     if name in self.partials:
-      return self.partials[name]['name']
+      return self.partials[name].name
     return name
 
   def GetTfidfSq(self):
