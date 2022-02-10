@@ -46,7 +46,7 @@ def CardDistance(tfidf_sq, a: oracle_lib.Card, b: oracle_lib.Card):
 
 class CubeDiff:
 
-  def __init__(self, oracle, list_a, list_b):
+  def __init__(self, oracle, list_a: List[str], list_b: List[str]):
     self.oracle = oracle
     self.set_a = collections.Counter(
         oracle.Canonicalize(name) for name in oracle_lib.ExpandList(list_a))
