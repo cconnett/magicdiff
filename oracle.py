@@ -17,6 +17,24 @@ def GetMaxOracle():
   return Oracle(max(potential_oracles))
 
 
+def MakeCardnamePattern(card: 'Card'):
+  if not ' // ' in card.name:
+    return MakeFacenamePattern(
+        card.name, is_legendary='Legendary' in card.get('type_line', ''))
+  return '|'.join(
+      MakeFacenamePattern(
+          face['name'], is_legendary='Legendary' in face.get('type_line', ''))
+      for face in card['card_faces'])
+
+
+def MakeFacenamePattern(face_name, is_legendary=False):
+  pattern = fr'(?:\b{re.escape(face_name)}\b)'
+  if is_legendary:
+    short_name = fr'(?:\b{re.escape(face_name.split(", ")[0])}\b)'
+    pattern += '|' + short_name
+  return pattern
+
+
 class Card:
 
   def __init__(self, json_dict):
@@ -33,12 +51,8 @@ class Card:
         self['mana_cost'] = self['card_faces'][0]['mana_cost']
     if 'oracle_text' not in self:
       self['oracle_text'] = ''
-    if ' // ' in self['name']:
-      cardname_pattern = '|'.join(
-          re.escape(part) for part in self['name'].split(' // '))
-    else:
-      cardname_pattern = re.escape(self['name'])
-    self['oracle_text'] = re.sub(fr'\b{cardname_pattern}\b', 'CARDNAME',
+    cardname_pattern = MakeCardnamePattern(self)
+    self['oracle_text'] = re.sub(cardname_pattern, 'CARDNAME',
                                  self['oracle_text'])
     self['oracle_text'] = REMINDER.sub('', self['oracle_text'])
 
