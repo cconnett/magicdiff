@@ -24,7 +24,7 @@ def FlattenManaCost(mana_cost: str):
       left, right = h.groups()
       if right == 'P':
         accumulator[left] += 1 / 3
-        accumulator[V] += 1 / 3
+        accumulator['V'] += 1 / 3
       elif left == '2':
         accumulator[right] += 2 / 3
         accumulator['V'] += 4 / 3
