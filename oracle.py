@@ -146,7 +146,7 @@ class Oracle:
             'the',
             'to',
         ],
-        ngram_range=(2, 3),
+        ngram_range=(1, 3),
     )
     tfidf = vectorizer.fit_transform(docs)
     self.tfidf_sq = tfidf * tfidf.T
