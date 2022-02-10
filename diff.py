@@ -91,7 +91,8 @@ class CubeDiff:
   def PageDiff(self):
     """Generate an HTML diff."""
     index_diff = sorted(self.RawDiff(), key=self._SortKey)
-    card_diff = [(self.removes[r] if r else None, self.adds[a] if a else None)
+    card_diff = [(self.removes[r] if r is not None else None,
+                  self.adds[a] if a is not None else None)
                  for r, a in index_diff]
     imagery = html_utils.GetImagery(self.oracle)
 
@@ -116,14 +117,15 @@ class CubeDiff:
 
   def TextDiff(self):
     index_diff = sorted(self.RawDiff(), key=self._SortKey)
-    card_diff = [(self.removes[r] if r else None, self.adds[a] if a else None)
+    card_diff = [(self.removes[r] if r is not None else None,
+                  self.adds[a] if a is not None else None)
                  for r, a in index_diff]
     width_removes = max((len(r.shortname) for r, a in card_diff if r),
                         default=0)
     width_adds = max((len(a.shortname) for r, a in card_diff if a), default=0)
     for r, a in index_diff:
-      remove = self.removes[r].shortname if r else None
-      add = self.adds[a].shortname if a else None
+      remove = self.removes[r].shortname if r is not None else None
+      add = self.adds[a].shortname if a is not None else None
       if remove and add:
         # yield ', '.join(f'{m:3.1f}' for m in self.metrics[r, a])
         yield f'  {remove:{width_removes}} -> {add:{width_adds}}'
