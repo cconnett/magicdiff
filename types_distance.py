@@ -1,18 +1,23 @@
-from typing import List
+from typing import Iterable, Set
 
 
-def TypeBucket(types: List[str]) -> str:
-  if 'Land' in types:
-    return 'Land'
-  elif 'Creature' in types:
-    return 'Creature'
-  elif 'Instant' in types or 'Sorcery' in types:
-    return 'Spell'
-  elif 'Planeswalker' in types:
-    return 'Planeswalker'
-  else:
-    return 'Permanent'
+def TypeBucket(type_line: str) -> Iterable[str]:
+  if 'Land' in type_line:
+    yield 'Land'
+  if 'Creature' in type_line:
+    yield 'Creature'
+  if 'Instant' in type_line:
+    yield 'Instant'
+    yield 'Sorcery'
+  if 'Sorcery' in type_line:
+    yield 'Sorcery'
+  if 'Planeswalker' in type_line:
+    yield 'Planeswalker'
+  if 'Enchantment' in type_line:
+    yield 'Enchantment'
+  if 'Artifact' in type_line:
+    yield 'Artifact'
 
 
-def BucketDistance(a: List[str], b: List[str]) -> int:
-  return 1 - bool(TypeBucket(a) == TypeBucket(b))
+def BucketDistance(a: str, b: str) -> int:
+  return len(set(TypeBucket(a)).symmetric_difference(TypeBucket(b)))
