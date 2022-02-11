@@ -20,7 +20,7 @@ import mana_cost_distance
 import oracle as oracle_lib
 import types_distance
 
-WEIGHTS = np.array([3, 1, 8, 0.2, 1])
+WEIGHTS = np.array([3, 1, 6, 2, 2])
 
 
 def Metrics(tfidf_sq, a: oracle_lib.Card, b: oracle_lib.Card):
