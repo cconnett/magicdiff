@@ -46,21 +46,14 @@ def CardDistance(tfidf_sq, a: oracle_lib.Card, b: oracle_lib.Card):
 
 class CubeDiff:
 
-  def __init__(self, oracle, list_a: List[str], list_b: List[str]):
+  def __init__(self, oracle, list_a: List[oracle_lib.Card],
+               list_b: List[oracle_lib.Card]):
     self.oracle = oracle
-    self.set_a = collections.Counter(
-        oracle.Canonicalize(name) for name in oracle_lib.ExpandList(list_a))
-    self.set_b = collections.Counter(
-        oracle.Canonicalize(name) for name in oracle_lib.ExpandList(list_b))
+    self.set_a = collections.Counter(list_a)
+    self.set_b = collections.Counter(list_b)
 
-    self.removes = [
-        self.oracle.Get(cardname)
-        for cardname in (self.set_a - self.set_b).elements()
-    ]
-    self.adds = [
-        self.oracle.Get(cardname)
-        for cardname in (self.set_b - self.set_a).elements()
-    ]
+    self.removes = list((self.set_a - self.set_b).elements())
+    self.adds = list((self.set_b - self.set_a).elements())
     self.PopulateMetrics()
 
   def PopulateMetrics(self):
@@ -152,13 +145,18 @@ class CubeDiff:
 
 
 def main(argv):
+  oracle = oracle_lib.GetMaxOracle()
+  oracle.GetTfidfSq()
+
   list_a = [
-      line.strip() for line in oracle_lib.ExpandList(open(argv[1]).readlines())
+      oracle.GetClose(line.strip())
+      for line in oracle_lib.ExpandList(open(argv[1]).readlines())
   ]
   list_b = [
-      line.strip() for line in oracle_lib.ExpandList(open(argv[2]).readlines())
+      oracle.GetClose(line.strip())
+      for line in oracle_lib.ExpandList(open(argv[2]).readlines())
   ]
-  oracle = oracle_lib.GetMaxOracle()
+
   cube_diff = CubeDiff(oracle, list_a, list_b)
   for line in cube_diff.PageDiff():
     print(line)

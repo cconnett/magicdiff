@@ -1,8 +1,9 @@
 from typing import Any, Dict
+import difflib
 import glob
+import itertools
 import json
 import pickle
-import itertools
 import re
 
 from sklearn.feature_extraction import text as text_extraction
@@ -33,6 +34,10 @@ def MakeFacenamePattern(face_name, is_legendary=False):
     short_name = fr'(?:\b{re.escape(face_name.split(", ")[0])}\b)'
     pattern += '|' + short_name
   return pattern
+
+
+class UnknownCardError(Exception):
+  """Failed to find card requested for lookup."""
 
 
 class Card:
@@ -114,6 +119,10 @@ class Oracle:
     assert len(self.oracle) == next(counter)
     pickle.dump((self.oracle, self.partials), open(f'{filename}.pkl', 'wb'))
 
+  def _AllCardAndPartialNames(self):
+    all_names = set(self.oracle.keys()) | set(self.partials.keys())
+    yield from all_names
+
   def Get(self, name) -> Card:
     p = self.partials.get(name)
     if p:
@@ -124,6 +133,18 @@ class Oracle:
     if name in self.partials:
       return self.partials[name].name
     return name
+
+  def GetClose(self, close_name):
+    try:
+      return self.Get(close_name)
+    except KeyError:
+      pass
+    try:
+      name = difflib.get_close_matches(
+          close_name, self._AllCardAndPartialNames(), n=1)[0]
+    except IndexError:
+      raise UnknownCardError(f'No card found for {close_name:r}.')
+    return self.Get(name)
 
   def GetTfidfSq(self):
     if self.tfidf_sq is not None:
