@@ -99,10 +99,6 @@ class Oracle:
   def __init__(self, filename):
     """Read all cards from {filename}."""
     self.tfidf_sq = None
-    try:
-      self.oracle, self.partials = pickle.load(open(f'{filename}.pkl', 'rb'))
-    except (IOError, EOFError):
-      pass
 
     json_card_dicts = json.load(open(filename))
     self.oracle = {
@@ -119,7 +115,6 @@ class Oracle:
       card['index'] = next(counter)
     self.oracle['Life // Death']['mana_cost'] = '{1}{B}'
     assert len(self.oracle) == next(counter)
-    pickle.dump((self.oracle, self.partials), open(f'{filename}.pkl', 'wb'))
 
   def _AllCardAndPartialNames(self):
     all_names = set(self.oracle.keys()) | set(self.partials.keys())
