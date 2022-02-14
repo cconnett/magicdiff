@@ -103,11 +103,11 @@ class CubeDiff:
     for remove, add in card_diff:
       yield '<li class="change">'
       if remove and add:
-        icon = '<img class="change-icon" src="Change.png">'
+        icon = '<img class="change-icon" src="Change.png" alt="becomes">'
       elif add:
-        icon = '<img class="change-icon" src="Plus.png">'
+        icon = '<img class="change-icon" src="Plus.png" alt="added">'
       elif remove:
-        icon = '<img class="change-icon" src="Minus.png">'
+        icon = '<img class="change-icon" src="Minus.png" alt="removed">'
 
       yield html_utils.CardImg(imagery, remove or 'ADDED')
       yield icon

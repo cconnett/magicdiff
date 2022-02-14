@@ -18,6 +18,17 @@ img.change-icon {
 img.card {
     width: 146;
 }
+.card-block {
+    position: relative;
+}
+.card-name {
+    position: absolute;
+    left: 11px;
+    top: 7px;
+    z-index: 1;
+    color: transparent;
+    font-size: 12px;
+}
 '''
 
 
@@ -27,7 +38,11 @@ def CardImg(imagery, card):
   elif card == 'ADDED':
     return '<img class="card" src="UnburnCard.png">'
   elif card.name in imagery:
-    return f'<img class="card" src="{imagery[card.name]}">'
+    return ('<div class="card-block">'
+            f'<div class="card-name">{card.name}</div>'
+            f'<img class="card" src="{imagery[card.name]}" '
+            f'alt="{card.name}" title="{card.name}">'
+            '</div>')
   else:
     return name
 
