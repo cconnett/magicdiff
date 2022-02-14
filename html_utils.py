@@ -24,10 +24,10 @@ img.card {
 .card-name {
     position: absolute;
     left: 11px;
-    top: 7px;
+    top: 10px;
     z-index: 1;
     color: transparent;
-    font-size: 12px;
+    font-size: 9px;
 }
 '''
 
