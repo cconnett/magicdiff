@@ -6,6 +6,8 @@ import json
 import pickle
 import re
 
+import nltk
+from nltk.stem import porter
 from sklearn.feature_extraction import text as text_extraction
 
 import constants
@@ -155,8 +157,23 @@ class Oracle:
             card['oracle_text'],
         )) for card in self.oracle.values()
     ]
+
+    def stem_tokens(tokens, stemmer):
+      stemmed = []
+      for item in tokens:
+        stemmed.append(stemmer.stem(item))
+      return stemmed
+
+    stemmer = porter.PorterStemmer()
+
+    def tokenize(text):
+      tokens = nltk.word_tokenize(text)
+      stems = stem_tokens(tokens, stemmer)
+      return stems
+
     vectorizer = text_extraction.TfidfVectorizer(
         token_pattern=r'[^\s,.:;—•"]+',
+        tokenizer=tokenize,
         stop_words=[
             'a',
             'an',
