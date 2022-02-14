@@ -187,7 +187,7 @@ class Oracle:
         ngram_range=(1, 3),
     )
     tfidf = vectorizer.fit_transform(docs)
-    self.tfidf_sq = tfidf * tfidf.T
+    self.tfidf_sq = tfidf.dot(tfidf.T)
     return self.tfidf_sq
 
 
