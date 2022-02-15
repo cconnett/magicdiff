@@ -104,7 +104,12 @@ class Oracle:
     self.oracle = {
         card_dict['name']: Card(card_dict)
         for card_dict in json_card_dicts
-        if card_dict['set_type'] not in ('token', 'vanguard', 'memorabilia')
+        if card_dict['set_type'] not in (
+            'token',
+            'vanguard',
+            'memorabilia',
+            'archenemy',
+        )
     }
 
     self.partials = {}
