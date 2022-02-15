@@ -38,12 +38,6 @@ def Metrics(tfidf_sq, a: oracle_lib.Card, b: oracle_lib.Card):
   return metrics
 
 
-def CardDistance(tfidf_sq, a: oracle_lib.Card, b: oracle_lib.Card):
-  """A metric for difference between cards a and b."""
-  metrics = Metrics(tfidf_sq, a, b)
-  return weights.dot(metrics.T**2)
-
-
 class CubeDiff:
 
   def __init__(self, oracle, list_a: List[oracle_lib.Card],
