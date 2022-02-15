@@ -10,6 +10,8 @@ import re
 import sys
 import traceback
 
+from absl import app
+from absl import flags
 import numpy as np
 import scipy.optimize
 
@@ -20,7 +22,13 @@ import mana_cost_distance
 import oracle as oracle_lib
 import types_distance
 
+FLAGS = flags.FLAGS
 WEIGHTS = np.array([3, 1, 6, 2, 2])
+
+flags.DEFINE_bool(
+    'html', False, 'Produce an html diff rather than text.', short_name='g')
+flags.DEFINE_bool('compute', False,
+                  'Compute the costs matrix and write to disk.')
 
 
 def Metrics(tfidf_sq, a: oracle_lib.Card, b: oracle_lib.Card):
@@ -152,13 +160,14 @@ def main(argv):
   ]
 
   cube_diff = CubeDiff(oracle, list_a, list_b)
-  for line in cube_diff.PageDiff():
+  diff = cube_diff.PageDiff() if FLAGS.html else cube_diff.TextDiff()
+  for line in diff:
     print(line)
 
 
 if __name__ == '__main__':
   try:
-    main(sys.argv)
+    app.run(main)
   except Exception as e:
     traceback.print_tb(e.__traceback__)
     print(repr(e))
