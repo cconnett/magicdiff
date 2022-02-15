@@ -8,6 +8,7 @@ import constants
 
 PIP = re.compile(r'\{(.*?)\}')
 HYBRID = re.compile('([2WUBRG])/([WUBRGP])')
+HYBRID_PHYREXIAN = re.compile('([WUBRG])/([WUBRG]/P)')
 
 
 @functools.cache
@@ -39,6 +40,11 @@ def FlattenManaCost(mana_cost: str):
     elif p.startswith('H'):  # Half mana
       accumulator[p[1]] += 0.5
       accumulator['V'] += 0.5
+    elif h := HYBRID_PHYREXIAN.fullmatch(p):
+      left, right = h.groups()
+      accumulator[left] += 1 / 6
+      accumulator[right] += 1 / 6
+      accumulator['V'] += 1 / 3
     else:
       accumulator['V'] += int(p)
   vector = np.array([
