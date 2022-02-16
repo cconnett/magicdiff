@@ -53,12 +53,10 @@ class CubeDiff:
   def __init__(self, oracle, list_a: List[oracle_lib.Card],
                list_b: List[oracle_lib.Card]):
     self.oracle = oracle
-    self.set_a = collections.Counter(list_a)
-    self.set_b = collections.Counter(list_b)
-
-    self.removes = list((self.set_a - self.set_b).elements())
-    self.adds = list((self.set_b - self.set_a).elements())
-    self.PopulateMetrics()
+    set_a = collections.Counter(list_a)
+    set_b = collections.Counter(list_b)
+    self.removes = list((set_a - set_b).elements())
+    self.adds = list((set_b - set_a).elements())
 
   def PopulateMetrics(self):
     n, m = len(self.removes), len(self.adds)
