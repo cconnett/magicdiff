@@ -149,8 +149,11 @@ class Oracle:
     return self.Get(name)
 
   def GetTfidfSq(self):
-    if self.tfidf_sq is not None:
-      return self.tfidf_sq
+    if self.tfidf_sq is None:
+      self._CreateTfidfSq()
+    return self.tfidf_sq
+
+  def _CreateTfidfSq(self):
     docs = [
         '\n'.join((
             card['type_line'],
@@ -188,7 +191,6 @@ class Oracle:
     )
     tfidf = vectorizer.fit_transform(docs)
     self.tfidf_sq = tfidf.dot(tfidf.T)
-    return self.tfidf_sq
 
 
 def ExpandList(lst):

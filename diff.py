@@ -12,6 +12,7 @@ import traceback
 
 from absl import app
 from absl import flags
+import h5py
 import numpy as np
 import scipy.optimize
 
@@ -24,6 +25,7 @@ import types_distance
 
 FLAGS = flags.FLAGS
 WEIGHTS = np.array([3, 1, 6, 2, 2])
+TFIDF_FILENAME = '/tmp/tfidf.hdf5'
 
 flags.DEFINE_bool(
     'html', False, 'Produce an html diff rather than text.', short_name='g')
@@ -146,9 +148,20 @@ class CubeDiff:
     )
 
 
+def WriteTfidfFile(oracle):
+  oracle._CreateTfidfSq()
+  print('Computed tf-idf matrix.', file=sys.stderr)
+  with h5py.File(TFIDF_FILENAME, 'w') as f:
+    f.create_dataset('tfidf', data=oracle.tfidf_sq.todense())
+  print('Wrote tf-idf matrix.', file=sys.stderr)
+
+
 def main(argv):
   oracle = oracle_lib.GetMaxOracle()
-  oracle.GetTfidfSq()
+  print('Loaded oracle.', file=sys.stderr)
+  if FLAGS.compute:
+    WriteTfidfFile(oracle)
+  oracle.tfidf_sq = h5py.File(TFIDF_FILENAME)['tfidf']
 
   list_a = [
       oracle.GetClose(line.strip())
@@ -158,8 +171,9 @@ def main(argv):
       oracle.GetClose(line.strip())
       for line in oracle_lib.ExpandList(open(argv[2]).readlines())
   ]
-
   cube_diff = CubeDiff(oracle, list_a, list_b)
+  cube_diff.PopulateMetrics()
+  print('Computed costs.', file=sys.stderr)
   diff = cube_diff.PageDiff() if FLAGS.html else cube_diff.TextDiff()
   for line in diff:
     print(line)
