@@ -104,6 +104,7 @@ class Card:
 
 
 NAME_PATTERN = re.compile('"name":"(.*?)",')
+SET_TYPE_PATTERN = re.compile('"set_type":"(.*?)",')
 
 
 class Oracle:
@@ -117,7 +118,11 @@ class Oracle:
 
     lines = open(filename).readlines()
     lines = lines[1:-1]  # Remove opening and closing square brackets.
-    for index, line in enumerate(lines):
+    for line in lines:
+      match = SET_TYPE_PATTERN.search(line)
+      assert match
+      if match.group(1) in ('token', 'vanguard', 'memorabilia', 'archenemy'):
+        continue
       match = NAME_PATTERN.search(line)
       assert match
       name = match.group(1)
