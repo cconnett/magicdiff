@@ -5,7 +5,9 @@ import itertools
 import json
 import pickle
 import re
+import sys
 
+import h5py
 import nltk
 from nltk.stem import porter
 from sklearn.feature_extraction import text as text_extraction
@@ -13,6 +15,7 @@ from sklearn.feature_extraction import text as text_extraction
 import constants
 
 REMINDER = re.compile(r'\(.*\)')
+TFIDF_FILENAME = '/tmp/tfidf.hdf5'
 
 
 def GetMaxOracle():
@@ -44,8 +47,15 @@ class UnknownCardError(Exception):
 
 class Card:
 
-  def __init__(self, json_dict):
-    self.json = json_dict
+  def __init__(self, name, json_string):
+    self.name = name
+    self.index = None
+    self.json_string = json_string
+    self.json = {}
+
+  def Parse(self):
+    if not self.json:
+      self.json = json.loads(self.json_string)
     if 'card_faces' in self:
       self['oracle_text'] = '\n'.join(
           face['oracle_text'] for face in self['card_faces'])
@@ -83,15 +93,17 @@ class Card:
       return False
     return o.name == self.name
 
-  @property
-  def name(self):
-    return self.json['name']
+  def __str__(self):
+    return f'Card({self.shortname}, {self.index})'
 
   @property
   def shortname(self):
     if len(self.name) <= 16:
       return self.name
-    return self.json['name'].split(' // ')[0]
+    return self.name.split(' // ')[0]
+
+
+NAME_PATTERN = re.compile('"name":"(.*?)",')
 
 
 class Oracle:
@@ -99,42 +111,38 @@ class Oracle:
   def __init__(self, filename):
     """Read all cards from {filename}."""
     self.tfidf_sq = None
-
-    json_card_dicts = json.load(open(filename))
-    self.oracle = {
-        card_dict['name']: Card(card_dict)
-        for card_dict in json_card_dicts
-        if card_dict['set_type'] not in (
-            'token',
-            'vanguard',
-            'memorabilia',
-            'archenemy',
-        )
-    }
-
+    self.oracle = {}
     self.partials = {}
-    counter = itertools.count()
-    for card in self.oracle.values():
-      for part in card.name.split(' // '):
-        self.partials[part] = card
-      card['index'] = next(counter)
-    self.oracle['Life // Death']['mana_cost'] = '{1}{B}'
-    assert len(self.oracle) == next(counter)
+    self.all_names = set()
 
-  def _AllCardAndPartialNames(self):
-    all_names = set(self.oracle.keys()) | set(self.partials.keys())
-    yield from all_names
+    lines = open(filename).readlines()
+    lines = lines[1:-1]  # Remove opening and closing square brackets.
+    for index, line in enumerate(lines):
+      match = NAME_PATTERN.search(line)
+      assert match
+      name = match.group(1)
+      line = line.strip(',\n')
+      self.oracle[name] = Card(name, line)
+
+    counter = itertools.count()
+    for name, card in self.oracle.items():
+      card.index = next(counter)
+      self.all_names.add(name)
+      for part in name.split(' // '):
+        self.partials[part] = card
+        self.all_names.add(part)
+
+  def _ParseAll(self):
+    # This should only be needed for generating the tf-idf matrix.
+    for card in self.oracle.values():
+      card.Parse()
 
   def Get(self, name) -> Card:
-    p = self.partials.get(name)
-    if p:
-      return p
-    return self.oracle.get(name)
-
-  def Canonicalize(self, name):
-    if name in self.partials:
-      return self.partials[name].name
-    return name
+    card = self.partials.get(name)
+    if not card:
+      card = self.oracle.get(name)
+    card.Parse()
+    return card
 
   def GetClose(self, close_name):
     try:
@@ -142,18 +150,34 @@ class Oracle:
     except KeyError:
       pass
     try:
-      name = difflib.get_close_matches(
-          close_name, self._AllCardAndPartialNames(), n=1)[0]
+      name = difflib.get_close_matches(close_name, self.all_names, n=1)[0]
     except IndexError:
       raise UnknownCardError(f'No card found for {close_name:r}.')
     return self.Get(name)
 
   def GetTfidfSq(self):
-    if self.tfidf_sq is None:
-      self._CreateTfidfSq()
+    if self.tfidf_sq is not None:
+      return self.tfidf_sq
+    try:
+      self._LoadTfidfSq()
+    except IOError:
+      self.WriteTfidfFile()
+      self._LoadTfidfSq()
     return self.tfidf_sq
 
+  def WriteTfidfFile(oracle):
+    print('Creating tf-idf matrix.', file=sys.stderr)
+    oracle._CreateTfidfSq()
+    print('Writing tf-idf matrix.', file=sys.stderr)
+    with h5py.File(TFIDF_FILENAME, 'w') as f:
+      f.create_dataset('tfidf', data=oracle.tfidf_sq.todense())
+    print('Wrote tf-idf matrix.', file=sys.stderr)
+
+  def _LoadTfidfSq(self):
+    self.tfidf_sq = h5py.File(TFIDF_FILENAME)['tfidf']
+
   def _CreateTfidfSq(self):
+    self._ParseAll()
     docs = [
         '\n'.join((
             card['type_line'],
