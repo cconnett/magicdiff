@@ -15,6 +15,7 @@ from absl import flags
 import h5py
 import numpy as np
 import scipy.optimize
+import yappi
 
 import color_distance
 import constants
@@ -146,6 +147,7 @@ class MagicDiff:
 
 
 def main(argv):
+  # yappi.start()
   oracle = oracle_lib.GetMaxOracle()
   print('Loaded oracle.', file=sys.stderr)
 
@@ -164,6 +166,7 @@ def main(argv):
   diff_lines = diff.PageDiff() if FLAGS.html else diff.TextDiff()
   for line in diff_lines:
     print(line)
+  yappi.get_func_stats().print_all()
 
 
 if __name__ == '__main__':
