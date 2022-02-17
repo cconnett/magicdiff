@@ -61,6 +61,4 @@ def FlattenManaCost(mana_cost: str):
 
 def EditDistance(mana_cost_a: str, mana_cost_b: str):
   """Distance between two mana costs by edit distance."""
-  ret = sum(abs(FlattenManaCost(mana_cost_a) - FlattenManaCost(mana_cost_b)))
-  # print(mana_cost_a, mana_cost_b, ret)
-  return ret
+  return sum(abs(FlattenManaCost(mana_cost_a) - FlattenManaCost(mana_cost_b)))
