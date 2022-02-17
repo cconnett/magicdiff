@@ -1,6 +1,8 @@
+import functools
 from typing import Iterable, Set
 
 
+@functools.cache
 def TypeBucket(type_line: str) -> Iterable[str]:
   if 'Land' in type_line:
     yield 'Land'
