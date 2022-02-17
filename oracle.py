@@ -54,8 +54,12 @@ class Card:
     self.json = {}
 
   def Parse(self):
-    if not self.json:
-      self.json = json.loads(self.json_string)
+    if self.json:
+      return
+    self._RealParse()
+
+  def _RealParse(self):
+    self.json = json.loads(self.json_string)
     if 'card_faces' in self:
       self['oracle_text'] = '\n'.join(
           face['oracle_text'] for face in self['card_faces'])
@@ -146,7 +150,6 @@ class Oracle:
     card = self.partials.get(name)
     if not card:
       card = self.oracle.get(name)
-    card.Parse()
     return card
 
   def GetClose(self, close_name):

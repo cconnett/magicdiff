@@ -35,6 +35,8 @@ flags.DEFINE_bool('compute', False,
 
 def Metrics(tfidf_sq, a: oracle_lib.Card, b: oracle_lib.Card):
   """A metric for difference between cards a and b."""
+  a.Parse()
+  b.Parse()
   color = color_distance.EditDistance(a['colors'], b['colors'])
   color_identity = color_distance.EditDistance(a['color_identity'],
                                                b['color_identity'])
