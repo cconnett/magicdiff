@@ -26,6 +26,7 @@ import types_distance
 
 FLAGS = flags.FLAGS
 WEIGHTS = np.array([3, 1, 6, 2, 2])
+COSTS_FILENAME = '/tmp/costs.hdf5'
 
 flags.DEFINE_bool(
     'html', False, 'Produce an html diff rather than text.', short_name='g')
@@ -55,10 +56,45 @@ class MagicDiff:
   def __init__(self, oracle, list_a: List[oracle_lib.Card],
                list_b: List[oracle_lib.Card]):
     self.oracle = oracle
+    self.global_costs = None
     set_a = collections.Counter(list_a)
     set_b = collections.Counter(list_b)
     self.removes = list((set_a - set_b).elements())
     self.adds = list((set_b - set_a).elements())
+
+  def GetGlobalCosts(self):
+    if self.global_costs is not None:
+      return self.global_costs
+    try:
+      self._LoadGlobalCosts()
+    except (IOError, KeyError):
+      self._WriteGlobalCostsFile()
+      self._LoadGlobalCosts()
+    return self.global_costs
+
+  def _WriteGlobalCostsFile(self):
+    with h5py.File(COSTS_FILENAME, 'a') as f:
+      costs = f.create_dataset(
+          'costs', (len(self.oracle.oracle), len(self.oracle.oracle)),
+          dtype='f8')
+      for i, c_i in enumerate(self.oracle.oracle.values()):
+        costs_i = np.zeros((len(self.oracle.oracle),), dtype='f8')
+        for j, c_j in enumerate(self.oracle.oracle.values()):
+          if i < j:
+            m = Metrics(self.oracle.GetTfidfSq(), c_i, c_j)
+            costs_i[j] = WEIGHTS.dot(m.T)
+        costs[i, :] = costs_i
+        costs[:, j] = costs_i.T
+        print(f'{i+1:05d} of {len(self.oracle.oracle)}: {c_i.shortname}')
+
+  def _LoadGlobalCosts(self):
+    try:
+      f = h5py.File(COSTS_FILENAME)
+      self.global_costs = f['costs']
+    except KeyError:
+      f.close()
+      self.global_costs = None
+      raise
 
   def PopulateMetrics(self):
     n, m = len(self.removes), len(self.adds)
@@ -163,7 +199,8 @@ def main(argv):
   ]
   diff = MagicDiff(oracle, list_a, list_b)
   print('Computing costs.', file=sys.stderr)
-  diff.PopulateMetrics()
+  # diff.PopulateMetrics()
+  diff.GetGlobalCosts()
   print('Computed costs.', file=sys.stderr)
   diff_lines = diff.PageDiff() if FLAGS.html else diff.TextDiff()
   for line in diff_lines:
