@@ -9,6 +9,7 @@ import pickle
 import re
 import sys
 import traceback
+import multiprocessing
 
 from absl import app
 from absl import flags
@@ -73,19 +74,34 @@ class MagicDiff:
     return self.global_costs
 
   def _WriteGlobalCostsFile(self):
-    with h5py.File(COSTS_FILENAME, 'a') as f:
+    with h5py.File(COSTS_FILENAME, 'w') as f:
       costs = f.create_dataset(
           'costs', (len(self.oracle.oracle), len(self.oracle.oracle)),
           dtype='f8')
-      for i, c_i in enumerate(self.oracle.oracle.values()):
-        costs_i = np.zeros((len(self.oracle.oracle),), dtype='f8')
-        for j, c_j in enumerate(self.oracle.oracle.values()):
-          if i < j:
-            m = Metrics(self.oracle.GetTfidfSq(), c_i, c_j)
-            costs_i[j] = WEIGHTS.dot(m.T)
-        costs[i, :] = costs_i
-        costs[:, j] = costs_i.T
-        print(f'{i+1:05d} of {len(self.oracle.oracle)}: {c_i.shortname}')
+    with multiprocessing.Pool() as pool:
+      for i, costs_i in enumerate(
+          pool.imap(
+              self._CostsFor,
+              enumerate(self.oracle.oracle.values()),
+              chunksize=70)):
+        # costs[:, i] = costs_i.T
+        print(f'{i+1:05d} of {len(self.oracle.oracle)}')
+
+  def _CostsFor(self, args):
+    (i, c_i) = args
+    costs_i = np.zeros((len(self.oracle.oracle),), dtype='f8')
+    for j, c_j in enumerate(self.oracle.oracle.values()):
+      if i < j:
+        m = Metrics(self.oracle.GetTfidfSq(), c_i, c_j)
+        costs_i[j] = WEIGHTS.dot(m.T)
+    while True:
+      try:
+        with h5py.File(COSTS_FILENAME, 'a') as f:
+          f['costs'][i] = costs_i
+        break
+      except BlockingIOError:
+        import time
+        time.sleep(0.1)
 
   def _LoadGlobalCosts(self):
     try:
@@ -98,14 +114,14 @@ class MagicDiff:
 
   def PopulateMetrics(self):
     n, m = len(self.removes), len(self.adds)
-    self.metrics = np.empty((n, m, 5))
     self.costs = np.empty((n, m))
     for i in range(n):
       remove = self.removes[i]
+      remove.Parse()
       for j in range(m):
         add = self.adds[j]
-        self.metrics[i, j] = Metrics(self.oracle.GetTfidfSq(), remove, add)
-        self.costs[i, j] = WEIGHTS.dot(self.metrics[i, j].T)
+        add.Parse()
+        self.costs[i, j] = self.global_costs[remove.index, add.index]
 
   def RawDiff(self) -> Iterable[Tuple[Optional[int], Optional[int]]]:
     """Yield a diff between lists by linear sum assignment."""
@@ -199,8 +215,8 @@ def main(argv):
   ]
   diff = MagicDiff(oracle, list_a, list_b)
   print('Computing costs.', file=sys.stderr)
-  # diff.PopulateMetrics()
   diff.GetGlobalCosts()
+  diff.PopulateMetrics()
   print('Computed costs.', file=sys.stderr)
   diff_lines = diff.PageDiff() if FLAGS.html else diff.TextDiff()
   for line in diff_lines:
