@@ -169,11 +169,11 @@ class Oracle:
     try:
       self._LoadTfidfSq()
     except IOError:
-      self.WriteTfidfFile()
+      self._WriteTfidfFile()
       self._LoadTfidfSq()
     return self.tfidf_sq
 
-  def WriteTfidfFile(oracle):
+  def _WriteTfidfFile(oracle):
     print('Creating tf-idf matrix.', file=sys.stderr)
     oracle._CreateTfidfSq()
     print('Writing tf-idf matrix.', file=sys.stderr)
