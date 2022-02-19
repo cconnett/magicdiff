@@ -203,7 +203,7 @@ class MagicDiff:
 
 def main(argv):
   # yappi.start()
-  oracle = oracle_lib.GetMaxOracle()
+  oracle = oracle_lib.GetLiteOracle()
   print('Loaded oracle.', file=sys.stderr)
 
   list_a = [

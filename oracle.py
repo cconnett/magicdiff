@@ -23,6 +23,10 @@ def GetMaxOracle():
   return Oracle(max(potential_oracles))
 
 
+def GetLiteOracle():
+  return pickle.load(open('lite-oracle.pkl', 'rb'))
+
+
 def MakeCardnamePattern(card: 'Card'):
   if not ' // ' in card.name:
     return MakeFacenamePattern(
