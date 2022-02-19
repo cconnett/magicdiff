@@ -9,9 +9,10 @@ KEYS_TO_DELETE = {
     'illustration_id', 'image_status', 'keywords', 'lang', 'layout',
     'legalities', 'mtgo_foil_id', 'mtgo_id', 'multiverse_ids', 'nonfoil',
     'object', 'oracle_id', 'oversized', 'prices', 'prints_search_uri', 'promo',
-    'rarity', 'related_uris', 'reprint', 'reserved', 'rulings_uri',
-    'scryfall_set_uri', 'set', 'set_id', 'set_name', 'set_search_uri',
-    'set_uri', 'story_spotlight', 'tcgplayer_id', 'textless', 'variation'
+    'rarity', 'related_uris', 'released_at', 'reprint', 'reserved',
+    'rulings_uri', 'scryfall_set_uri', 'scryfall_uri', 'set', 'set_id',
+    'set_name', 'set_search_uri', 'set_uri', 'story_spotlight', 'tcgplayer_id',
+    'textless', 'uri', 'variation'
 }
 
 
