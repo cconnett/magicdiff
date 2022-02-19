@@ -121,7 +121,8 @@ class MagicDiff:
       for j in range(m):
         add = self.adds[j]
         add.Parse()
-        self.costs[i, j] = self.global_costs[remove.index, add.index]
+        self.costs[i, j] = self.global_costs[min(remove.index, add.index),
+                                             max(remove.index, add.index)]
 
   def RawDiff(self) -> Iterable[Tuple[Optional[int], Optional[int]]]:
     """Yield a diff between lists by linear sum assignment."""
