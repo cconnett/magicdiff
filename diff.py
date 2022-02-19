@@ -78,7 +78,7 @@ class MagicDiff:
     with h5py.File(COSTS_FILENAME, 'w') as f:
       costs = f.create_dataset(
           'costs', (len(self.oracle.oracle), len(self.oracle.oracle)),
-          dtype='f8')
+          dtype='f4')
     with multiprocessing.Pool() as pool:
       for i, costs_i in enumerate(
           pool.imap(
@@ -89,7 +89,7 @@ class MagicDiff:
 
   def _CostsFor(self, args):
     (i, c_i) = args
-    costs_i = np.zeros((len(self.oracle.oracle),), dtype='f8')
+    costs_i = np.zeros((len(self.oracle.oracle),), dtype='f4')
     for j, c_j in enumerate(self.oracle.oracle.values()):
       if i < j:
         m = Metrics(self.oracle.GetTfidfSq(), c_i, c_j)
