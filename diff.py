@@ -85,7 +85,6 @@ class MagicDiff:
               self._CostsFor,
               enumerate(self.oracle.oracle.values()),
               chunksize=70)):
-        # costs[:, i] = costs_i.T
         print(f'{i+1:05d} of {len(self.oracle.oracle)}')
 
   def _CostsFor(self, args):
