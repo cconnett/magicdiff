@@ -129,7 +129,7 @@ class Oracle:
     for line in lines:
       match = SET_TYPE_PATTERN.search(line)
       assert match
-      if match.group(1) in ('token', 'vanguard', 'memorabilia', 'archenemy'):
+      if match.group(1) in ('token', 'vanguard', 'memorabilia'):
         continue
       match = NAME_PATTERN.search(line)
       assert match

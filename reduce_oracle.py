@@ -1,4 +1,6 @@
+import itertools
 import pickle
+import re
 
 import oracle as oracle_lib
 
@@ -21,6 +23,19 @@ def ReduceOracle(oracle):
     card.Parse()
     for key in KEYS_TO_DELETE:
       card.json.pop(key, None)
+
+  cards_to_delete = []
+  for name, card in oracle.oracle.items():
+    if re.search(r'\b(Plane|Scheme)\b', card.get('type_line', '')):
+      cards_to_delete.append(name)
+  for name in cards_to_delete:
+    oracle.oracle.pop(name)
+    oracle.partials.pop(name)
+    oracle.all_names.remove(name)
+
+  counter = itertools.count()
+  for card in oracle.oracle.values():
+    card.index = next(counter)
 
 
 if __name__ == '__main__':
