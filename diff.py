@@ -79,6 +79,8 @@ class MagicDiff:
       costs = f.create_dataset(
           'costs', (len(self.oracle.oracle), len(self.oracle.oracle)),
           dtype='f4')
+    self.oracle.GetTfidfSq()
+    self.oracle.tfidf_sq = None
     with multiprocessing.Pool() as pool:
       for i, costs_i in enumerate(
           pool.imap(
