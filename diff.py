@@ -4,12 +4,13 @@ from typing import List, Iterable, Tuple, Optional
 import collections
 import glob
 import math
+import multiprocessing
 import pdb
 import pickle
 import re
 import sys
+import time
 import traceback
-import multiprocessing
 
 from absl import app
 from absl import flags
@@ -100,7 +101,6 @@ class MagicDiff:
           f['costs'][i] = costs_i
         break
       except BlockingIOError:
-        import time
         time.sleep(0.1)
 
   def _LoadGlobalCosts(self):
@@ -203,8 +203,9 @@ class MagicDiff:
 
 def main(argv):
   # yappi.start()
+  s = time.time()
   oracle = oracle_lib.GetLiteOracle()
-  print('Loaded oracle.', file=sys.stderr)
+  print(f'Loaded oracle in {time.time() - s:.2f}s.', file=sys.stderr)
 
   list_a = [
       oracle.GetClose(line.strip())
@@ -216,9 +217,10 @@ def main(argv):
   ]
   diff = MagicDiff(oracle, list_a, list_b)
   print('Computing costs.', file=sys.stderr)
+  s = time.time()
   diff.GetGlobalCosts()
   diff.PopulateMetrics()
-  print('Computed costs.', file=sys.stderr)
+  print(f'Computed costs in {time.time() - s:.2f}s.', file=sys.stderr)
   diff_lines = diff.PageDiff() if FLAGS.html else diff.TextDiff()
   for line in diff_lines:
     print(line)
