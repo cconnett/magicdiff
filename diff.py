@@ -178,7 +178,7 @@ class MagicDiff:
       add = self.adds[a].shortname if a is not None else None
       if remove and add:
         # yield ', '.join(f'{m:3.1f}' for m in self.metrics[r, a])
-        yield f'  {remove:{width_removes}} -> {add:{width_adds}}'
+        yield f'  {remove:{width_removes}} 🡺  {add:{width_adds}}'
       elif remove:
         yield f'- {remove}'
       else:
