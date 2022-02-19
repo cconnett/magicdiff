@@ -5,7 +5,6 @@ import collections
 import glob
 import math
 import multiprocessing
-import pdb
 import pickle
 import re
 import sys
@@ -234,5 +233,6 @@ if __name__ == '__main__':
   except Exception as e:
     traceback.print_tb(e.__traceback__)
     print(repr(e))
+    import pdb
     pdb.post_mortem()
     raise

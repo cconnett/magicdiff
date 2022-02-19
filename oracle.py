@@ -8,9 +8,6 @@ import re
 import sys
 
 import h5py
-import nltk
-from nltk.stem import porter
-from sklearn.feature_extraction import text as text_extraction
 
 import constants
 
@@ -189,6 +186,10 @@ class Oracle:
     self.tfidf_sq = h5py.File(TFIDF_FILENAME)['tfidf']
 
   def _CreateTfidfSq(self):
+    import nltk
+    from nltk.stem import porter
+    from sklearn.feature_extraction import text as text_extraction
+
     self._ParseAll()
     docs = [
         '\n'.join((
