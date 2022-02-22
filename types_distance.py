@@ -1,24 +1,26 @@
 import functools
-from typing import Iterable, Set
+from typing import Iterable, Set, Tuple
 
 
 @functools.cache
-def TypeBucket(type_line: str) -> Iterable[str]:
+def TypeBucket(type_line: str) -> Tuple[str]:
+  ret = []
   if 'Land' in type_line:
-    yield 'Land'
+    ret.append('Land')
   if 'Creature' in type_line:
-    yield 'Creature'
+    ret.append('Creature')
   if 'Instant' in type_line:
-    yield 'Instant'
-    yield 'Sorcery'
+    ret.append('Instant')
+    ret.append('Sorcery')
   if 'Sorcery' in type_line:
-    yield 'Sorcery'
+    ret.append('Sorcery')
   if 'Planeswalker' in type_line:
-    yield 'Planeswalker'
+    ret.append('Planeswalker')
   if 'Enchantment' in type_line:
-    yield 'Enchantment'
+    ret.append('Enchantment')
   if 'Artifact' in type_line:
-    yield 'Artifact'
+    ret.append('Artifact')
+  return tuple(ret)
 
 
 def BucketDistance(a: str, b: str) -> int:
