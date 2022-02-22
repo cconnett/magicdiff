@@ -154,14 +154,14 @@ class Oracle:
     return card
 
   def GetClose(self, close_name):
-    try:
-      return self.Get(close_name)
-    except KeyError:
-      pass
+    name = self.Get(close_name)
+    if name is not None:
+      return name
     try:
       name = difflib.get_close_matches(close_name, self.all_names, n=1)[0]
+      print(f'Corrected {close_name} -> {name}', file=sys.stderr)
     except IndexError:
-      raise UnknownCardError(f'No card found for {close_name:r}.')
+      raise UnknownCardError(f'No card found for {close_name:r}.') from None
     return self.Get(name)
 
   def GetTfidfSq(self):
