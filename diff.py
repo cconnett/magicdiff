@@ -226,8 +226,8 @@ if __name__ == '__main__':
   try:
     app.run(main)
   except Exception as e:
+    import pdb
     traceback.print_tb(e.__traceback__)
     print(repr(e))
-    import pdb
     pdb.post_mortem()
     raise
