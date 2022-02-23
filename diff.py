@@ -69,8 +69,9 @@ class MagicDiff:
     try:
       self._LoadGlobalCosts()
     except (IOError, KeyError):
-      self._WriteGlobalCostsFile()
-      self._LoadGlobalCosts()
+      if FLAGS.compute:
+        self._WriteGlobalCostsFile()
+        self._LoadGlobalCosts()
     return self.global_costs
 
   def _WriteGlobalCostsFile(self):
@@ -121,8 +122,12 @@ class MagicDiff:
       for j in range(m):
         add = self.adds[j]
         add.Parse()
-        self.costs[i, j] = self.global_costs[min(remove.index, add.index),
-                                             max(remove.index, add.index)]
+        if self.global_costs is None:
+          self.costs[i, j] = Metrics(self.oracle.GetTfidfSq(), remove,
+                                     add).dot(WEIGHTS)
+        else:
+          self.costs[i, j] = self.global_costs[min(remove.index, add.index),
+                                               max(remove.index, add.index)]
 
   def RawDiff(self) -> Iterable[Tuple[Optional[int], Optional[int]]]:
     """Yield a diff between lists by linear sum assignment."""
