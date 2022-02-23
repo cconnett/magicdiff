@@ -26,7 +26,7 @@ import oracle as oracle_lib
 import types_distance
 
 FLAGS = flags.FLAGS
-WEIGHTS = np.array([3, 1, 6, 2, 2]).T
+WEIGHTS = np.array([3, 1, 6, 2, 0.2]).T
 COSTS_FILENAME = '/tmp/costs.hdf5'
 
 flags.DEFINE_bool(
