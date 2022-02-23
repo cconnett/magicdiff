@@ -207,15 +207,10 @@ def main(argv):
   oracle = oracle_lib.GetLiteOracle()
   print(f'Loaded oracle in {time.time() - s:.2f}s.', file=sys.stderr)
 
-  list_a = [
-      oracle.GetClose(line.strip())
-      for line in oracle_lib.ExpandList(open(argv[1]).readlines())
-  ]
-  list_b = [
-      oracle.GetClose(line.strip())
-      for line in oracle_lib.ExpandList(open(argv[2]).readlines())
-  ]
-  diff = MagicDiff(oracle, list_a, list_b)
+  list_a = oracle_lib.CardList(open(argv[1]).readlines(), oracle)
+  list_b = oracle_lib.CardList(open(argv[2]).readlines(), oracle)
+
+  diff = MagicDiff(oracle, list_a.sections[''].cards, list_b.sections[''].cards)
   print('Computing costs.', file=sys.stderr)
   s = time.time()
   diff.GetGlobalCosts()

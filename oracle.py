@@ -249,7 +249,6 @@ def ExpandList(lst):
   """
   for line in lst:
     line = line.strip()
-    # line = line.split(' // ')[0]
     try:
       first_token, rest = line.split(maxsplit=1)
     except ValueError:
@@ -259,3 +258,50 @@ def ExpandList(lst):
       yield from [rest] * int(first_token)
     else:
       yield line
+
+
+DECK_TERMS = ('deck', 'maindeck', 'sideboard', 'side', 'main')
+SECTION_PATTERN = re.compile(r'(#+)\s*([\w\s]+)')
+
+
+class CardListSection:
+
+  def __init__(self, name, depth):
+    self.depth = depth
+    self.name = name
+    self.cards = []
+
+  def append(self, card):
+    self.cards.append(card)
+
+
+class CardList:
+
+  def __init__(self, lines, oracle):
+    section = CardListSection('', 0)
+    self.sections = {'': section}
+    for line in lines:
+      line = line.strip()
+      if not line:
+        continue
+      elif line.lower() in DECK_TERMS:
+        section = self.sections.setdefault(line, CardListSection(line, 1))
+        continue
+      elif match := SECTION_PATTERN.fullmatch(line):
+        hashes, name = match.groups()
+        section = self.sections.setdefault(name,
+                                           CardListSection(name, len(hashes)))
+      else:
+        multiplicity = 1
+        name = line
+        try:
+          first_token, rest = line.split(maxsplit=1)
+          if first_token.isnumeric():
+            multiplicity = int(first_token)
+            name = rest
+        except ValueError:
+          pass
+
+      card = oracle.GetClose(name)
+      for _ in range(multiplicity):
+        section.append(card)
