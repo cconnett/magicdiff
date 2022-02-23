@@ -26,7 +26,7 @@ import oracle as oracle_lib
 import types_distance
 
 FLAGS = flags.FLAGS
-WEIGHTS = np.array([3, 1, 6, 2, 2])
+WEIGHTS = np.array([3, 1, 6, 2, 2]).T
 COSTS_FILENAME = '/tmp/costs.hdf5'
 
 flags.DEFINE_bool(
@@ -95,7 +95,7 @@ class MagicDiff:
     for j, c_j in enumerate(self.oracle.oracle.values()):
       if i < j:
         m = Metrics(self.oracle.GetTfidfSq(), c_i, c_j)
-        costs_i[j] = WEIGHTS.dot(m.T)
+        costs_i[j] = m.dot(WEIGHTS)
     while True:
       try:
         with h5py.File(COSTS_FILENAME, 'a') as f:
