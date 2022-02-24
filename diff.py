@@ -176,8 +176,8 @@ class MagicDiff:
                   self.adds[a] if a is not None else None)
                  for r, a in index_diff]
     width_removes = max((len(r.shortname) for r, a in card_diff if r),
-                        default=0)
-    width_adds = max((len(a.shortname) for r, a in card_diff if a), default=0)
+                        default=1)
+    width_adds = max((len(a.shortname) for r, a in card_diff if a), default=1)
     for r, a in index_diff:
       remove = self.removes[r].shortname if r is not None else None
       add = self.adds[a].shortname if a is not None else None
@@ -187,7 +187,7 @@ class MagicDiff:
       elif remove:
         yield f'- {remove}'
       else:
-        yield f'{"":{width_removes}}  + {add}'
+        yield f'{"":{width_removes}}   +  {add}'
 
   def _SortKey(self, change):
     index_a, index_b = change
@@ -215,7 +215,26 @@ def main(argv):
   list_a = oracle_lib.CardList(open(argv[1]).readlines(), oracle)
   list_b = oracle_lib.CardList(open(argv[2]).readlines(), oracle)
 
-  diff = MagicDiff(oracle, list_a.sections[''].cards, list_b.sections[''].cards)
+  incomplete_sections = set(list_a.sections.keys()).symmetric_difference(
+      list_b.sections.keys())
+  for section in list_a.sections:
+    if section in list_b.sections:
+      diff = MagicDiff(oracle, list_a.sections[section].cards,
+                       list_b.sections[section].cards)
+      diff.GetGlobalCosts()
+      diff.PopulateMetrics()
+      if section:
+        print(f'### {section} ###')
+      for line in diff.TextDiff():
+        print(line)
+  rest_a = []
+  rest_b = []
+  for section in incomplete_sections:
+    if section in list_a.sections:
+      rest_a.extend(list_a.sections[section].cards)
+    if section in list_b.sections:
+      rest_b.extend(list_b.sections[section].cards)
+  diff = MagicDiff(oracle, rest_a, rest_b)
   print('Computing costs.', file=sys.stderr)
   s = time.time()
   diff.GetGlobalCosts()

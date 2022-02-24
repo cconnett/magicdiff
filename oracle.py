@@ -261,7 +261,7 @@ def ExpandList(lst):
 
 
 DECK_TERMS = ('deck', 'maindeck', 'sideboard', 'side', 'main')
-SECTION_PATTERN = re.compile(r'(#+)\s*([\w\s]+)')
+SECTION_PATTERN = re.compile(r'(#+)\s*(.+)')
 
 
 class CardListSection:
@@ -302,6 +302,6 @@ class CardList:
         except ValueError:
           pass
 
-      card = oracle.GetClose(name)
-      for _ in range(multiplicity):
-        section.append(card)
+        card = oracle.GetClose(name)
+        for _ in range(multiplicity):
+          section.append(card)
