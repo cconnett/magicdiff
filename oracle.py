@@ -132,15 +132,15 @@ class Oracle:
       assert match
       name = match.group(1)
       line = line.strip(',\n')
-      self.oracle[name] = Card(name, line)
+      self.oracle[name.lower()] = Card(name, line)
 
     counter = itertools.count()
     for name, card in self.oracle.items():
       card.index = next(counter)
       self.all_names.add(name)
       for part in name.split(' // '):
-        self.partials[part] = card
-        self.all_names.add(part)
+        self.partials[part.lower()] = card
+        self.all_names.add(part.lower())
 
   def _ParseAll(self):
     # This should only be needed for generating the tf-idf matrix.
@@ -148,21 +148,23 @@ class Oracle:
       card.Parse()
 
   def Get(self, name) -> Card:
-    card = self.partials.get(name)
+    card = self.partials.get(name.lower())
     if not card:
-      card = self.oracle.get(name)
+      card = self.oracle.get(name.lower())
     return card
 
   def GetClose(self, close_name):
-    name = self.Get(close_name)
-    if name is not None:
-      return name
+    card = self.Get(close_name.lower())
+    if card is not None:
+      return card
     try:
-      name = difflib.get_close_matches(close_name, self.all_names, n=1)[0]
-      print(f'Corrected {close_name} -> {name}', file=sys.stderr)
+      name = difflib.get_close_matches(
+          close_name.lower(), self.all_names, n=1)[0]
+      card = self.Get(name)
+      print(f'Corrected {close_name} -> {card.shortname}', file=sys.stderr)
     except IndexError:
       raise UnknownCardError(f'No card found for {close_name:r}.') from None
-    return self.Get(name)
+    return card
 
   def GetTfidfSq(self):
     if self.tfidf_sq is not None:

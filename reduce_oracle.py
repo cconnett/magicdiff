@@ -29,9 +29,9 @@ def ReduceOracle(oracle):
     if re.search(r'\b(Plane|Scheme)\b', card.get('type_line', '')):
       cards_to_delete.append(name)
   for name in cards_to_delete:
-    oracle.oracle.pop(name)
-    oracle.partials.pop(name)
-    oracle.all_names.remove(name)
+    oracle.oracle.pop(name.lower())
+    oracle.partials.pop(name.lower())
+    oracle.all_names.remove(name.lower())
 
   counter = itertools.count()
   for card in oracle.oracle.values():
