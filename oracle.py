@@ -301,7 +301,6 @@ class CardList:
             name = rest
         except ValueError:
           pass
-
-      card = oracle.GetClose(name)
-      for _ in range(multiplicity):
-        section.append(card)
+        card = oracle.GetClose(name)
+        for _ in range(multiplicity):
+          section.append(card)
