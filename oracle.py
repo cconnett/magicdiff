@@ -179,7 +179,7 @@ class Oracle:
     oracle._CreateTfidfSq()
     print('Writing tf-idf matrix.', file=sys.stderr)
     with h5py.File(TFIDF_FILENAME, 'w') as f:
-      f.create_dataset('tfidf', data=oracle.tfidf_sq.todense())
+      f.create_dataset('tfidf', data=oracle.tfidf_sq.todense(), dtype='f4')
     print('Wrote tf-idf matrix.', file=sys.stderr)
 
   def _LoadTfidfSq(self):
